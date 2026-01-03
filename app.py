@@ -340,12 +340,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()    cd c:\Users\vinee\Sphota.AI
-    
-    # Step 1: Create repo at https://github.com/new (name: Sphota.AI)
-    # Step 2: Copy GitHub's push commands
-    # Step 3: Run them (replace YOUR_USERNAME):
-    
-    git remote add origin https://github.com/YOUR_USERNAME/Sphota.AI.git
-    git branch -M main
-    git push -u origin main
+    main()
