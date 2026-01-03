@@ -1,0 +1,71 @@
+# 🚀 Quick Start: Push to GitHub in 3 Steps
+
+## Step 1️⃣: Create Repository on GitHub
+
+Visit: https://github.com/new
+
+- Repository name: `Sphota.AI`
+- Description: `Cognitive Meaning Engine based on Bhartṛhari's Akhaṇḍapakṣa`
+- Select: **Public**
+- **Skip** README, .gitignore, license (we have them)
+- Click: **Create repository**
+
+---
+
+## Step 2️⃣: Copy the Commands
+
+GitHub will show you commands. Use this template:
+
+```bash
+git remote add origin https://github.com/YOUR_USERNAME/Sphota.AI.git
+git branch -M main
+git push -u origin main
+```
+
+**Replace `YOUR_USERNAME` with your GitHub username**
+
+---
+
+## Step 3️⃣: Paste in Terminal
+
+```bash
+# Navigate to project directory
+cd c:\Users\vinee\Sphota.AI
+
+# Paste the commands above
+git remote add origin https://github.com/YOUR_USERNAME/Sphota.AI.git
+git branch -M main
+git push -u origin main
+```
+
+Done! ✅
+
+---
+
+## Verify
+
+Visit: `https://github.com/YOUR_USERNAME/Sphota.AI`
+
+You should see all files and the README displayed! 🎉
+
+---
+
+## What Gets Uploaded
+
+✅ 21 files  
+✅ 4,000+ lines of code  
+✅ Full documentation  
+✅ MIT License  
+✅ Test suite  
+✅ Streamlit demo  
+✅ Architecture docs  
+
+---
+
+## Need Help?
+
+See **GITHUB_SETUP.md** for detailed instructions.
+
+---
+
+**That's it! You're now on GitHub!** 🌟
