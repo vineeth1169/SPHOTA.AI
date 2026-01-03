@@ -1,0 +1,191 @@
+{
+  "version": "1.0.0",
+  "description": "Pure Meanings Corpus (Śabda-tattva) - Demonstrating Polysemic Ambiguity Resolution",
+  "intents": [
+    {
+      "id": "river_bank",
+      "pure_text": "Navigate to the natural riverbank location for outdoor activities",
+      "description": "User wants to go to a river bank (natural location)",
+      "required_context": {
+        "desa": "nature",
+        "sahacarya": ["fishing", "outdoor", "river", "nature", "walk"],
+        "kala_preferred": "day"
+      },
+      "examples": [
+        "take me to the bank",
+        "go to the bank",
+        "navigate to the bank",
+        "directions to the bank"
+      ]
+    },
+    {
+      "id": "financial_bank",
+      "pure_text": "Navigate to the financial institution for banking services",
+      "description": "User wants to go to a financial bank (building)",
+      "required_context": {
+        "desa": "city",
+        "sahacarya": ["money", "atm", "deposit", "withdraw", "finance", "account"],
+        "kala_preferred": "day"
+      },
+      "examples": [
+        "take me to the bank",
+        "go to the bank",
+        "navigate to the bank",
+        "I need to visit the bank"
+      ]
+    },
+    {
+      "id": "lights_on",
+      "pure_text": "Turn on the interior lighting system",
+      "description": "User wants to turn on lights",
+      "required_context": {
+        "desa": "home",
+        "sahacarya": ["dark", "night", "see", "brightness"],
+        "artha": "automation"
+      },
+      "examples": [
+        "turn on the lights",
+        "lights on",
+        "switch on lights",
+        "enable lighting"
+      ]
+    },
+    {
+      "id": "lights_off",
+      "pure_text": "Turn off the interior lighting system",
+      "description": "User wants to turn off lights",
+      "required_context": {
+        "desa": "home",
+        "sahacarya": ["sleep", "night", "save", "energy"],
+        "artha": "automation"
+      },
+      "examples": [
+        "turn off the lights",
+        "lights off",
+        "switch off lights",
+        "disable lighting"
+      ]
+    },
+    {
+      "id": "weather_query",
+      "pure_text": "Retrieve current weather information and forecast",
+      "description": "User wants to know the weather",
+      "required_context": {
+        "artha": "information",
+        "prakarana": "morning_routine"
+      },
+      "examples": [
+        "what's the weather",
+        "weather today",
+        "how's the weather",
+        "weather forecast"
+      ]
+    },
+    {
+      "id": "set_alarm",
+      "pure_text": "Create a new alarm for waking up",
+      "description": "User wants to set an alarm",
+      "required_context": {
+        "desa": "home",
+        "prakarana": "evening_relaxation",
+        "artha": "automation"
+      },
+      "examples": [
+        "set an alarm",
+        "wake me up",
+        "set alarm for morning",
+        "create alarm"
+      ]
+    },
+    {
+      "id": "set_timer",
+      "pure_text": "Create a countdown timer",
+      "description": "User wants to set a timer",
+      "required_context": {
+        "desa": "kitchen",
+        "sahacarya": ["cooking", "recipe", "food"],
+        "artha": "automation"
+      },
+      "examples": [
+        "set a timer",
+        "timer for 10 minutes",
+        "start countdown",
+        "set timer"
+      ]
+    },
+    {
+      "id": "play_music",
+      "pure_text": "Start music playback",
+      "description": "User wants to play music",
+      "required_context": {
+        "prakarana": "evening_relaxation",
+        "artha": "entertainment"
+      },
+      "examples": [
+        "play music",
+        "start music",
+        "play a song",
+        "put on music"
+      ]
+    },
+    {
+      "id": "stop_music",
+      "pure_text": "Stop music playback",
+      "description": "User wants to stop music",
+      "required_context": {
+        "virodhita": ["play", "start"],
+        "artha": "entertainment"
+      },
+      "examples": [
+        "stop music",
+        "pause music",
+        "turn off music",
+        "stop playing"
+      ]
+    },
+    {
+      "id": "call_contact",
+      "pure_text": "Initiate a phone call to a contact",
+      "description": "User wants to make a phone call",
+      "required_context": {
+        "desa": "car",
+        "artha": "communication"
+      },
+      "examples": [
+        "call mom",
+        "phone john",
+        "make a call",
+        "dial contact"
+      ]
+    },
+    {
+      "id": "send_message",
+      "pure_text": "Send a text message to a contact",
+      "description": "User wants to send a text message",
+      "required_context": {
+        "artha": "communication"
+      },
+      "examples": [
+        "send a message",
+        "text john",
+        "send text",
+        "message contact"
+      ]
+    },
+    {
+      "id": "navigation_home",
+      "pure_text": "Navigate to home address",
+      "description": "User wants directions home",
+      "required_context": {
+        "desa": "car",
+        "artha": "information"
+      },
+      "examples": [
+        "take me home",
+        "navigate home",
+        "directions to home",
+        "go home"
+      ]
+    }
+  ]
+}

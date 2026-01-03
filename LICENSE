@@ -1,0 +1,93 @@
+MIT License
+
+Copyright (c) 2026 Sphota AI Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+PHILOSOPHICAL ATTRIBUTION:
+
+This software is based on the linguistic theories of Bhartṛhari (c. 5th century),
+a Sanskrit grammarian and philosopher who developed the concept of "Sphoṭa" 
+(the holistic, indivisible unit of meaning).
+
+Key concepts implemented:
+- Akhaṇḍapakṣa (Sentence Holism)
+- Vākyasphoṭa (Sentence Meaning)
+- The 12 linguistic determinants for meaning resolution
+
+While Bhartṛhari's works are in the public domain, this implementation and 
+commentary are subject to the MIT License above.
+
+---
+
+THIRD-PARTY LICENSES:
+
+This project uses the following open-source packages:
+
+1. sentence-transformers (Apache License 2.0)
+   - https://github.com/UKPLab/sentence-transformers
+   - Used for SBERT embeddings (all-MiniLM-L6-v2 model)
+
+2. PyTorch (BSD License)
+   - https://github.com/pytorch/pytorch
+   - Deep learning backend for embeddings
+
+3. Streamlit (Apache License 2.0)
+   - https://github.com/streamlit/streamlit
+   - Interactive web application framework
+
+4. numpy (BSD License)
+   - https://github.com/numpy/numpy
+   - Numerical computations
+
+5. pydantic (MIT License)
+   - https://github.com/pydantic/pydantic
+   - Data validation and parsing
+
+6. pytest (MIT License)
+   - https://github.com/pytest-dev/pytest
+   - Testing framework
+
+See requirements.txt for version details.
+
+---
+
+CORPUS ATTRIBUTION:
+
+The Pure Meanings corpus (data/intents.json) includes examples based on:
+- General NLU conventions
+- Voice assistant paradigms
+- Polysemic examples from linguistic literature
+
+These are original examples created for demonstration purposes.
+
+---
+
+RESEARCH ATTRIBUTION:
+
+Implementation informed by:
+1. Iyer, K. A. S. (1969). Vākyapadīya of Bhartṛhari with the Prakīrṇaprakāśikā
+2. Cardona, George. (1997). Pāṇini: His Work and Its Traditions
+3. Reimers & Gurevych. (2019). Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks
+
+---
+
+For questions about licensing or attribution, please open an issue on GitHub.

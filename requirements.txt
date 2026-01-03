@@ -1,0 +1,38 @@
+# Sphota Voice AI - MVP Requirements
+# Philosophy: Bhartṛhari's Sentence Holism (Akhaṇḍapakṣa)
+#
+# Sphota: A Cognitive Meaning Engine
+# An Intent-First NLU based on Bhartṛhari's Linguistic Monism.
+#
+# Unlike traditional LLMs that predict the next token, Sphota identifies 
+# the Vākyasphoṭa (holistic sentence meaning) prior to syntactic processing.
+# It utilizes a Context Resolution Matrix to resolve polysemy via spatial 
+# and temporal metadata (Deśa/Kāla).
+#
+# Features:
+# - Apabhraṃśa Normalization: Maps slang/accented inputs to pure intent vectors.
+# - Context-Aware: Resolves ambiguity using 12 dynamic context factors.
+# - Privacy-First: runs entirely locally using SBERT and ChromaDB.
+
+# Core Embeddings & Vector Store
+sentence-transformers==2.3.1
+chromadb==0.4.22
+numpy==1.24.3
+
+# Audio Processing (Vaikharī Layer)
+openai-whisper==20231117
+torch==2.1.2
+torchaudio==2.1.2
+
+# UI Framework
+streamlit==1.30.0
+
+# Testing Framework
+pytest==7.4.3
+pytest-mock==3.12.0
+
+# Utilities
+pandas==2.1.4
+pydantic==2.5.3
+python-dotenv==1.0.0
+
