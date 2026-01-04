@@ -1,0 +1,307 @@
+{
+  "intents": [
+    {
+      "intent_id": "turn_on_lights_conflict_test",
+      "user_input": "Turn on the lights",
+      "primary_type": "command_action",
+      "keywords": ["turn", "on", "lights", "light"],
+      "register": "Neutral",
+      "vocabulary_level": "Casual",
+      "urgency": "Normal",
+      "politeness": "Formal",
+      "valid_screens": ["Home", "LivingRoom", "Kitchen"],
+      "task_id": "lighting_control",
+      "required_location": null,
+      "valid_time_range": [0, 23],
+      "has_alternate_forms": false,
+      "test_scenarios": [
+        {
+          "scenario_name": "Success Case - Lights OFF",
+          "description": "Should succeed when system_state is OFF",
+          "context": {
+            "system_state": "OFF",
+            "current_screen": "Home",
+            "current_task_id": "lighting_control",
+            "audio_pitch": "Normal",
+            "input_confidence": 0.95,
+            "command_history": [],
+            "social_mode": "Neutral"
+          },
+          "expected_score_range": [0.7, 1.0],
+          "test_factor": "Virodhitā"
+        },
+        {
+          "scenario_name": "Conflict Case - Lights ON",
+          "description": "Should FAIL (0.1x multiplier) when system_state is already ON",
+          "context": {
+            "system_state": "ON",
+            "current_screen": "Home",
+            "current_task_id": "lighting_control",
+            "audio_pitch": "Normal",
+            "input_confidence": 0.95,
+            "command_history": [],
+            "social_mode": "Neutral"
+          },
+          "expected_score_range": [0.0, 0.15],
+          "test_factor": "Virodhitā - Conflict Check"
+        }
+      ]
+    },
+    {
+      "intent_id": "thats_sick_propriety_test",
+      "user_input": "That's sick",
+      "primary_type": "evaluation",
+      "keywords": ["sick", "cool", "awesome", "disgusting", "gross"],
+      "register": "Slang",
+      "vocabulary_level": "Casual",
+      "urgency": "Low",
+      "politeness": "Informal",
+      "valid_screens": ["Chat", "Social", "Review"],
+      "task_id": "feedback",
+      "required_location": null,
+      "valid_time_range": [0, 23],
+      "has_alternate_forms": true,
+      "alternate_meanings": [
+        {
+          "meaning": "That is cool (positive)",
+          "context_requirement": "social_mode: Casual",
+          "description": "Slang compliment in casual setting"
+        },
+        {
+          "meaning": "That is disgusting (negative)",
+          "context_requirement": "social_mode: Business",
+          "description": "Literal meaning in formal business setting"
+        }
+      ],
+      "test_scenarios": [
+        {
+          "scenario_name": "Casual Context - Positive Interpretation",
+          "description": "In Casual mode, 'sick' = 'cool' (positive)",
+          "context": {
+            "social_mode": "Casual",
+            "user_demographic": "Gen Z",
+            "current_screen": "Chat",
+            "current_task_id": "feedback",
+            "audio_pitch": "High",
+            "input_confidence": 0.92,
+            "command_history": ["That movie was amazing"],
+            "gps_tag": "Home"
+          },
+          "expected_score_range": [0.65, 1.0],
+          "test_factor": "Aucitī - Propriety (Positive in Casual)"
+        },
+        {
+          "scenario_name": "Business Context - Negative Interpretation",
+          "description": "In Business mode, 'sick' = 'disgusting' (negative), applies 0.5x multiplier",
+          "context": {
+            "social_mode": "Business",
+            "user_demographic": "Professional",
+            "current_screen": "Chat",
+            "current_task_id": "feedback",
+            "audio_pitch": "Neutral",
+            "input_confidence": 0.88,
+            "command_history": ["Quality report required"],
+            "gps_tag": "Office"
+          },
+          "expected_score_range": [0.0, 0.3],
+          "test_factor": "Aucitī - Propriety (Penalty in Business)"
+        }
+      ]
+    },
+    {
+      "intent_id": "right_intonation_test",
+      "user_input": "Right",
+      "primary_type": "confirmation",
+      "keywords": ["right", "correct", "affirmative", "yes"],
+      "register": "Neutral",
+      "vocabulary_level": "Casual",
+      "urgency": "Low",
+      "politeness": "Neutral",
+      "valid_screens": ["Dialog", "Chat", "Agreement"],
+      "task_id": "confirmation",
+      "required_location": null,
+      "valid_time_range": [0, 23],
+      "has_alternate_forms": true,
+      "alternate_meanings": [
+        {
+          "meaning": "Correct (affirmation)",
+          "context_requirement": "audio_pitch: Flat, Neutral, Low",
+          "description": "Flat tone indicates agreement"
+        },
+        {
+          "meaning": "Is that so? (questioning)",
+          "context_requirement": "audio_pitch: High, Rising",
+          "description": "Rising pitch indicates skepticism or question"
+        }
+      ],
+      "test_scenarios": [
+        {
+          "scenario_name": "Flat Tone - Confirmation",
+          "description": "Flat intonation = affirmation/agreement",
+          "context": {
+            "audio_pitch": "Flat",
+            "user_demographic": "Millennial",
+            "current_screen": "Dialog",
+            "current_task_id": "confirmation",
+            "input_confidence": 0.94,
+            "command_history": ["Do you agree?"],
+            "social_mode": "Neutral",
+            "gps_tag": "Office"
+          },
+          "expected_score_range": [0.65, 1.0],
+          "test_factor": "Svara - Intonation (Flat = Agreement)"
+        },
+        {
+          "scenario_name": "Rising Tone - Questioning",
+          "description": "Rising pitch = questioning/skepticism, boosts question intent (+0.12 to +0.15)",
+          "context": {
+            "audio_pitch": "Rising",
+            "user_demographic": "Gen Z",
+            "current_screen": "Dialog",
+            "current_task_id": "confirmation",
+            "input_confidence": 0.88,
+            "command_history": ["This is the plan"],
+            "social_mode": "Casual",
+            "gps_tag": "Home"
+          },
+          "expected_score_range": [0.6, 0.95],
+          "test_factor": "Svara - Intonation (Rising = Question)"
+        }
+      ]
+    },
+    {
+      "intent_id": "book_it_association_test",
+      "user_input": "Book it",
+      "primary_type": "action_request",
+      "keywords": ["book", "booking", "reserve", "reservation"],
+      "register": "Casual",
+      "vocabulary_level": "Casual",
+      "urgency": "High",
+      "politeness": "Informal",
+      "valid_screens": ["Travel", "Restaurant", "Hotel", "Booking"],
+      "task_id": null,
+      "required_location": null,
+      "valid_time_range": [0, 23],
+      "has_alternate_forms": true,
+      "alternate_meanings": [
+        {
+          "meaning": "Book a Flight",
+          "context_requirement": "command_history includes: 'Travel Search', 'Flight', 'Airline'",
+          "task_context": "travel_booking"
+        },
+        {
+          "meaning": "Book a Restaurant Table",
+          "context_requirement": "command_history includes: 'Restaurant Search', 'Dining', 'Cuisine'",
+          "task_context": "restaurant_booking"
+        }
+      ],
+      "test_scenarios": [
+        {
+          "scenario_name": "Travel Context - Book Flight",
+          "description": "Recent history of travel searches = Book Flight intent (+0.2 association boost)",
+          "context": {
+            "command_history": ["Search flights to Paris", "Check travel dates", "Compare airlines"],
+            "current_task_id": "travel_booking",
+            "current_screen": "Travel",
+            "user_demographic": "Millennial",
+            "social_mode": "Casual",
+            "audio_pitch": "High",
+            "input_confidence": 0.96,
+            "gps_tag": "Home"
+          },
+          "expected_score_range": [0.75, 1.0],
+          "test_factor": "Sahacarya - Association History (Travel)"
+        },
+        {
+          "scenario_name": "Restaurant Context - Book Table",
+          "description": "Recent history of restaurant searches = Book Table intent (+0.2 association boost)",
+          "context": {
+            "command_history": ["Search restaurants near me", "Check Italian cuisine", "View menus"],
+            "current_task_id": "restaurant_booking",
+            "current_screen": "Restaurant",
+            "user_demographic": "Gen Z",
+            "social_mode": "Casual",
+            "audio_pitch": "Normal",
+            "input_confidence": 0.93,
+            "gps_tag": "Downtown"
+          },
+          "expected_score_range": [0.72, 0.98],
+          "test_factor": "Sahacarya - Association History (Restaurant)"
+        }
+      ]
+    },
+    {
+      "intent_id": "bank_location_test",
+      "user_input": "Bank",
+      "primary_type": "noun_reference",
+      "keywords": ["bank", "river", "finance", "money", "account"],
+      "register": "Neutral",
+      "vocabulary_level": "Neutral",
+      "urgency": "Low",
+      "politeness": "Neutral",
+      "valid_screens": ["Map", "Finance", "Navigation", "Search"],
+      "task_id": null,
+      "required_location": null,
+      "valid_time_range": [0, 23],
+      "has_alternate_forms": true,
+      "alternate_meanings": [
+        {
+          "meaning": "River Bank (geographic feature)",
+          "context_requirement": "gps_tag includes: 'Nature', 'Park', 'Riverside'",
+          "location_type": "natural"
+        },
+        {
+          "meaning": "Financial Institution (business)",
+          "context_requirement": "gps_tag includes: 'City', 'Downtown', 'Business District'",
+          "location_type": "urban"
+        }
+      ],
+      "test_scenarios": [
+        {
+          "scenario_name": "Natural Location - River Bank",
+          "description": "In Nature context, prioritizes 'River Bank' (+0.2 location boost)",
+          "context": {
+            "gps_tag": "Riverside Park",
+            "current_screen": "Map",
+            "user_demographic": "Gen X",
+            "social_mode": "Casual",
+            "audio_pitch": "Neutral",
+            "input_confidence": 0.90,
+            "command_history": ["Show hiking trails", "Natural parks nearby"],
+            "current_task_id": "location_search"
+          },
+          "expected_score_range": [0.68, 0.95],
+          "test_factor": "Deśa - Location (Natural Feature)"
+        },
+        {
+          "scenario_name": "Urban Location - Financial Bank",
+          "description": "In City context, prioritizes 'Financial Institution' (+0.2 location boost)",
+          "context": {
+            "gps_tag": "Downtown Business District",
+            "current_screen": "Finance",
+            "user_demographic": "Professional",
+            "social_mode": "Business",
+            "audio_pitch": "Neutral",
+            "input_confidence": 0.91,
+            "command_history": ["Check account balance", "Transfer funds"],
+            "current_task_id": "banking"
+          },
+          "expected_score_range": [0.70, 0.98],
+          "test_factor": "Deśa - Location (Urban/Financial)"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "description": "Complex Intent Database for 12-Factor Context Resolution Matrix testing",
+    "test_coverage": {
+      "Virodhitā": "turn_on_lights_conflict_test",
+      "Aucitī": "thats_sick_propriety_test",
+      "Svara": "right_intonation_test",
+      "Sahacarya": "book_it_association_test",
+      "Deśa": "bank_location_test"
+    },
+    "usage_notes": "Each intent contains multiple test_scenarios that demonstrate how context_data variations trigger different scoring paths in the ContextManager.calculate_confidence() method."
+  }
+}

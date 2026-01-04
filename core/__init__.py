@@ -12,6 +12,7 @@ This package implements intent recognition through:
 from .pasyanti_engine import PasyantiEngine, Intent, ResolvedIntent
 from .context_matrix import ContextResolutionMatrix, ContextObject
 from .apabhramsa_layer import ApabhramsaLayer
+from .context_manager import ContextManager
 
 __version__ = "1.0.0"
 __author__ = "Sphota.AI"
@@ -23,4 +24,5 @@ __all__ = [
     "ContextResolutionMatrix",
     "ContextObject",
     "ApabhramsaLayer",
+    "ContextManager",
 ]

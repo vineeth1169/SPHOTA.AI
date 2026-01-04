@@ -13,11 +13,14 @@ import streamlit as st
 from pathlib import Path
 import sys
 from datetime import datetime
+import pandas as pd
+import plotly.graph_objects as go
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from core import PasyantiEngine, ContextResolutionMatrix
+from core.context_manager import ContextManager
 
 
 # Page configuration
@@ -36,6 +39,13 @@ def load_engine():
     return PasyantiEngine(intents_path=str(intents_path))
 
 
+@st.cache_resource
+def load_context_manager():
+    """Load and cache the Context Manager."""
+    return ContextManager()
+
+
+
 def main():
     """Main application entry point."""
     
@@ -44,286 +54,335 @@ def main():
     st.markdown("*Based on Bhartṛhari's Akhaṇḍapakṣa (Sentence Holism)*")
     st.markdown("---")
     
-    # Load engine
-    with st.spinner("Loading Paśyantī Engine..."):
+    # Load engines
+    with st.spinner("Loading Paśyantī Engine & Context Manager..."):
         engine = load_engine()
+        context_mgr = load_context_manager()
     
-    # Sidebar - Context Configuration
-    st.sidebar.header("🎯 Context Factors")
+    # ============================================================================
+    # SIDEBAR: Input Simulation
+    # ============================================================================
+    st.sidebar.header("🎯 Context Simulation")
     st.sidebar.markdown("*Configure the 12 Bhartṛhari Determinants*")
     st.sidebar.markdown("---")
     
-    # === Spatiotemporal Factors ===
-    st.sidebar.subheader("📍 Deśa (Place)")
-    desa = st.sidebar.selectbox(
+    # Standard Controls
+    st.sidebar.subheader("📍 Location")
+    location = st.sidebar.selectbox(
         "Current Location",
-        ["home", "nature", "city", "kitchen", "car", "office", "gym"],
+        ["Home", "City", "Nature", "Office", "Kitchen", "Car", "Gym"],
         index=0,
-        help="Where is the user located?"
+        help="Where is the user located? (Deśa)"
     )
     
-    st.sidebar.subheader("⏰ Kāla (Time)")
-    kala_mode = st.sidebar.radio(
-        "Time Mode",
-        ["Auto (Current)", "Manual"],
-        index=0
-    )
+    st.sidebar.subheader("⏰ Time")
+    time_mode = st.sidebar.radio("Time Mode", ["Current", "Manual"], index=0)
     
-    if kala_mode == "Auto (Current)":
-        kala = datetime.now()
-        st.sidebar.info(f"Current: {kala.strftime('%I:%M %p')}")
+    if time_mode == "Current":
+        current_hour = datetime.now().hour
+        st.sidebar.info(f"🕐 {datetime.now().strftime('%I:%M %p')}")
     else:
-        hour = st.sidebar.slider("Hour", 0, 23, 12)
-        kala = datetime.now().replace(hour=hour, minute=0)
+        current_hour = st.sidebar.slider("Hour of Day", 0, 23, 12)
+        st.sidebar.info(f"🕐 {current_hour:02d}:00")
     
-    # === Associative Factors ===
-    st.sidebar.subheader("🔗 Sahacārya (Association)")
-    sahacarya_input = st.sidebar.text_input(
-        "Recent Context (comma-separated)",
-        placeholder="e.g., fishing, outdoor",
-        help="What has the user been doing recently?"
-    )
-    sahacarya = [s.strip() for s in sahacarya_input.split(",")] if sahacarya_input else None
+    # Advanced Context Simulation Toggle
+    st.sidebar.markdown("---")
+    show_advanced = st.sidebar.checkbox("⚙️ Show Advanced Factors", value=False)
     
-    # === Semantic Factors ===
-    st.sidebar.subheader("🎯 Artha (Purpose)")
-    artha = st.sidebar.selectbox(
-        "User's Goal",
-        ["None", "productivity", "entertainment", "information", "communication", "automation"],
-        index=0
-    )
-    artha = artha if artha != "None" else None
-    
-    st.sidebar.subheader("📋 Prakaraṇa (Situation)")
-    prakarana = st.sidebar.selectbox(
-        "Current Situation",
-        ["None", "morning_routine", "cooking", "travel", "work_session", "evening_relaxation"],
-        index=0
-    )
-    prakarana = prakarana if prakarana != "None" else None
-    
-    # Advanced factors (collapsible)
-    with st.sidebar.expander("⚙️ Advanced Factors"):
-        vyakti = st.text_input("Vyakti (User Profile)", placeholder="user_id")
-        vyakti = vyakti if vyakti else None
+    if show_advanced:
+        st.sidebar.markdown("### Advanced Context Factors")
         
-        shabda_samarthya = st.slider(
-            "Śabda-sāmarthya (Word Capacity)",
-            0.0, 1.0, 0.8, 0.1,
-            help="Semantic richness of input"
+        # Social Mode (Tests Aucitī - Propriety)
+        social_mode = st.sidebar.selectbox(
+            "Social Mode (Aucitī)",
+            ["Casual", "Business"],
+            index=0,
+            help="Affects how formal/informal inputs are interpreted"
         )
         
-        auciti = st.slider(
-            "Aucitī (Propriety)",
-            -1.0, 1.0, 0.0, 0.1,
-            help="Contextual appropriateness"
+        # System State (Tests Virodhitā - Conflict Check)
+        system_state = st.sidebar.selectbox(
+            "System State (Virodhitā)",
+            ["ON", "OFF"],
+            index=1,
+            help="Current state of the controlled device. Detects contradictions."
         )
+        
+        # User History (Tests Sahacarya - Association)
+        history_type = st.sidebar.selectbox(
+            "Recent User Activity (Sahacarya)",
+            ["None", "Travel", "Restaurant", "Shopping"],
+            index=0,
+            help="What has the user been doing? Boosts relevant intents."
+        )
+        
+        # Voice Pitch (Tests Svara - Intonation)
+        audio_pitch = st.sidebar.selectbox(
+            "Voice Pitch (Svara)",
+            ["Neutral", "Flat", "Rising", "High"],
+            index=0,
+            help="Audio pitch affects intent interpretation"
+        )
+        
+        # Additional advanced factors
+        st.sidebar.markdown("#### Confidence Sliders")
+        input_confidence = st.sidebar.slider(
+            "Input Quality (Apabhraṃśa Fidelity)",
+            0.5, 1.0, 0.9, 0.05,
+            help="How clear is the input? Low confidence widens search threshold."
+        )
+        
+        user_demographic = st.sidebar.selectbox(
+            "User Demographic (Vyakti)",
+            ["Gen Z", "Millennial", "Gen X", "Boomer"],
+            index=1,
+            help="Affects vocabulary matching"
+        )
+        
+    else:
+        # Default values when advanced is off
+        social_mode = "Casual"
+        system_state = "OFF"
+        history_type = "None"
+        audio_pitch = "Neutral"
+        input_confidence = 0.9
+        user_demographic = "Millennial"
     
-    # Main area
-    col1, col2 = st.columns([3, 2])
+    # ============================================================================
+    # MAIN AREA: Input and Results
+    # ============================================================================
+    st.header("🎤 Voice Command Input")
     
-    with col1:
-        st.header("🎤 Vaikharī Layer (Input)")
-        
-        # Polysemic example selector
-        st.subheader("Quick Examples")
-        example_col1, example_col2, example_col3 = st.columns(3)
-        
-        with example_col1:
-            if st.button("🏞️ River Bank", use_container_width=True):
-                st.session_state.user_input = "take me to the bank"
-                st.session_state.preset_context = {
-                    "desa": "nature",
-                    "sahacarya": ["fishing", "outdoor"]
-                }
-        
-        with example_col2:
-            if st.button("🏦 Financial Bank", use_container_width=True):
-                st.session_state.user_input = "take me to the bank"
-                st.session_state.preset_context = {
-                    "desa": "city",
-                    "sahacarya": ["money", "atm"]
-                }
-        
-        with example_col3:
-            if st.button("💡 Lights On", use_container_width=True):
-                st.session_state.user_input = "turn on the lights"
-                st.session_state.preset_context = {
-                    "desa": "home",
-                    "artha": "automation"
-                }
-        
-        # Apply preset if exists
-        if "preset_context" in st.session_state:
-            preset = st.session_state.preset_context
-            if "desa" in preset:
-                desa = preset["desa"]
-            if "sahacarya" in preset:
-                sahacarya = preset["sahacarya"]
-            if "artha" in preset:
-                artha = preset["artha"]
-            del st.session_state.preset_context
-        
-        # User input
-        user_input = st.text_area(
-            "Voice Command / Text Input",
-            value=st.session_state.get("user_input", ""),
-            placeholder="e.g., 'take me to the bank' or 'turn on lights'",
-            height=100,
-            key="input_area"
-        ) or ""  # Ensure it's always a string, never None
-        
-        # Process button
+    # Quick example buttons
+    col_ex1, col_ex2, col_ex3 = st.columns(3)
+    
+    with col_ex1:
+        if st.button("🏞️ 'Bank' (River)", use_container_width=True):
+            st.session_state.user_input = "bank"
+            st.session_state.example_context = {
+                "location": "Nature",
+                "history_type": "None"
+            }
+    
+    with col_ex2:
+        if st.button("🏦 'Bank' (Finance)", use_container_width=True):
+            st.session_state.user_input = "bank"
+            st.session_state.example_context = {
+                "location": "City",
+                "history_type": "Shopping"
+            }
+    
+    with col_ex3:
+        if st.button("💡 'Turn on lights'", use_container_width=True):
+            st.session_state.user_input = "turn on the lights"
+            st.session_state.example_context = {
+                "location": "Home",
+                "system_state": "OFF"
+            }
+    
+    # Apply example preset if selected
+    if "example_context" in st.session_state:
+        preset = st.session_state.example_context
+        if "location" in preset:
+            location = preset["location"]
+        if "history_type" in preset:
+            history_type = preset["history_type"]
+        if "system_state" in preset:
+            system_state = preset["system_state"]
+        del st.session_state.example_context
+    
+    # User input text area
+    user_input = st.text_area(
+        "Enter your command",
+        value=st.session_state.get("user_input", ""),
+        placeholder="e.g., 'take me to the bank' or 'turn on the lights'",
+        height=80,
+        key="input_area"
+    ) or ""
+    
+    # Process button
+    col_btn1, col_btn2 = st.columns([3, 1])
+    with col_btn1:
         process_clicked = st.button(
             "🔮 Resolve Intent (Paśyantī)",
             type="primary",
             use_container_width=True
         )
     
-    with col2:
-        st.header("ℹ️ System Info")
-        
-        model_info = engine.get_model_info()
-        st.metric("Loaded Intents", model_info["intent_count"])
-        st.metric("Embedding Dim", model_info["embedding_dimension"])
-        
-        st.info(f"**📍 Location:** {desa.title()}")
-        st.info(f"**⏰ Time:** {kala.strftime('%I:%M %p')}")
-        
-        if sahacarya:
-            st.info(f"**🔗 Context:** {', '.join(sahacarya)}")
+    with col_btn2:
+        st.metric("Input Confidence", f"{input_confidence:.0%}")
     
-    # Process intent resolution
+    # ============================================================================
+    # INTENT RESOLUTION WITH 12-FACTOR ANALYSIS
+    # ============================================================================
     if process_clicked and user_input.strip():
         st.markdown("---")
-        st.header("⚡ The Flash of Insight (Paśyantī)")
+        st.header("⚡ Intent Resolution Result")
         
-        # Build context dictionary
-        context = {
-            "desa": desa,
-            "kala": kala,
-            "sahacarya": sahacarya,
-            "artha": artha,
-            "prakarana": prakarana,
-            "vyakti": vyakti,
-            "shabda_samarthya": shabda_samarthya,
-            "auciti": auciti
+        # Build context data for ContextManager
+        command_history = []
+        if history_type != "None":
+            command_history = {
+                "Travel": ["Search flights to Paris", "Check travel dates"],
+                "Restaurant": ["Search restaurants near me", "Check cuisines"],
+                "Shopping": ["Browse products", "Add to cart"]
+            }.get(history_type, [])
+        
+        context_data = {
+            "command_history": command_history,
+            "system_state": system_state,
+            "current_task_id": "demo_task",
+            "current_screen": "Home",
+            "social_mode": social_mode,
+            "gps_tag": location,
+            "current_hour": current_hour,
+            "user_demographic": user_demographic,
+            "audio_pitch": audio_pitch,
+            "input_confidence": input_confidence,
+            "user_input": user_input
         }
         
-        # Resolve intent
-        with st.spinner("Resolving Vākyasphoṭa..."):
+        # Resolve intent using engine
+        with st.spinner("Analyzing context with 12-Factor Matrix..."):
             resolved_intents = engine.resolve_intent(
                 user_input=user_input,
-                current_context=context,
+                current_context={
+                    "desa": location.lower(),
+                    "kala": datetime.now().replace(hour=current_hour),
+                    "sahacarya": [history_type.lower()] if history_type != "None" else None
+                },
                 return_top_k=5
             )
         
-        # Display results
-        col_result1, col_result2 = st.columns(2)
+        # Calculate confidence scores using ContextManager
+        scored_results = []
+        for result in resolved_intents[:3]:
+            try:
+                # Create a mock intent dict for context manager
+                intent_dict = {
+                    "type": result.intent.id,
+                    "keywords": result.intent.id.split("_"),
+                    "register": "Casual",
+                    "vocabulary_level": "Neutral",
+                    "urgency": "Normal",
+                    "valid_screens": ["Home"],
+                    "required_location": location,
+                    "valid_time_range": (0, 23)
+                }
+                
+                # Calculate confidence with 12-factor matrix
+                twelve_factor_score = context_mgr.calculate_confidence(
+                    intent=intent_dict,
+                    context_data=context_data,
+                    base_score=result.raw_similarity
+                )
+                
+                scored_results.append({
+                    "intent": result.intent.id,
+                    "description": result.intent.description,
+                    "raw_score": result.raw_similarity,
+                    "twelve_factor_score": twelve_factor_score,
+                    "boost": twelve_factor_score - result.raw_similarity
+                })
+            except Exception as e:
+                # Fallback if context manager fails
+                scored_results.append({
+                    "intent": result.intent.id,
+                    "description": result.intent.description,
+                    "raw_score": result.raw_similarity,
+                    "twelve_factor_score": result.context_adjusted_score,
+                    "boost": result.context_adjusted_score - result.raw_similarity
+                })
+        
+        # Display winning intent prominently
+        winner = scored_results[0]
+        
+        st.success("")
+        col_result1, col_result2, col_result3 = st.columns(3)
         
         with col_result1:
-            st.subheader("🤖 Standard AI (Raw Similarity)")
-            st.caption("Pure semantic matching - context-blind")
-            
-            for i, result in enumerate(resolved_intents[:3], 1):
-                score_pct = result.raw_similarity * 100
-                
-                # Create colored box
-                if i == 1:
-                    st.markdown(f"""
-                    <div style="padding: 15px; border-radius: 10px; background-color: #f0f0f0; margin-bottom: 10px;">
-                        <h4>#{i} {result.intent.id}</h4>
-                        <p><strong>Score:</strong> {score_pct:.1f}%</p>
-                        <p style="font-size: 0.9em;">{result.intent.description}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.markdown(f"""
-                    <div style="padding: 10px; border-radius: 5px; background-color: #fafafa; margin-bottom: 5px;">
-                        <p><strong>#{i} {result.intent.id}</strong> - {score_pct:.1f}%</p>
-                    </div>
-                    """, unsafe_allow_html=True)
+            st.metric("🎯 Winning Intent", winner["intent"].replace("_", " ").title())
         
         with col_result2:
-            st.subheader("🕉️ Sphota AI (Context-Resolved)")
-            st.caption("12-factor contextual resolution")
+            st.metric("Raw Score", f"{winner['raw_score']:.1%}")
+        
+        with col_result3:
+            st.metric("12-Factor Score", f"{winner['twelve_factor_score']:.1%}")
+        
+        st.info(f"**Description:** {winner['description']}")
+        
+        # Expandable "Why" section
+        with st.expander("🔍 Why did Sphota choose this?", expanded=True):
+            st.markdown(f"""
+            ### Context Resolution Analysis
             
-            for i, result in enumerate(resolved_intents[:3], 1):
-                score_pct = result.context_adjusted_score * 100
-                boost = (result.context_adjusted_score - result.raw_similarity) * 100
-                
-                # Determine color based on boost
-                if boost > 0:
-                    bg_color = "#d4edda"  # Green
-                    border_color = "#28a745"
-                elif boost < 0:
-                    bg_color = "#f8d7da"  # Red
-                    border_color = "#dc3545"
-                else:
-                    bg_color = "#f0f0f0"
-                    border_color = "#6c757d"
-                
-                if i == 1:
-                    st.markdown(f"""
-                    <div style="padding: 15px; border-radius: 10px; background-color: {bg_color}; 
-                                border: 3px solid {border_color}; margin-bottom: 10px;">
-                        <h4>✨ #{i} {result.intent.id}</h4>
-                        <p><strong>Score:</strong> {score_pct:.1f}% 
-                           <span style="color: {'green' if boost > 0 else 'red'};">
-                           ({boost:+.1f}%)
-                           </span>
-                        </p>
-                        <p style="font-size: 0.9em;">{result.intent.description}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.markdown(f"""
-                    <div style="padding: 10px; border-radius: 5px; background-color: {bg_color}; 
-                                border-left: 3px solid {border_color}; margin-bottom: 5px;">
-                        <p><strong>#{i} {result.intent.id}</strong> - {score_pct:.1f}% 
-                           <span style="color: {'green' if boost > 0 else 'red'};">
-                           ({boost:+.1f}%)
-                           </span>
-                        </p>
-                    </div>
-                    """, unsafe_allow_html=True)
-        
-        # Winner announcement
-        winner = resolved_intents[0]
-        st.markdown("---")
-        st.success(f"""
-        ### 🎯 Resolved Vākyasphoṭa: **{winner.intent.id.upper()}**
-        
-        **Pure Meaning:** {winner.intent.pure_text}
-        
-        **Confidence:** {winner.confidence * 100:.1f}%
-        """)
-        
-        # Show active factors
-        if winner.active_factors:
-            st.info(f"**Active Context Factors:** {', '.join(winner.active_factors)}")
-        
-        # Detailed comparison table
-        with st.expander("📊 Detailed Score Comparison"):
-            st.markdown("#### Top 5 Intents")
+            **Input:** "{user_input}"
             
-            comparison_data = []
-            for result in resolved_intents[:5]:
-                comparison_data.append({
-                    "Intent": result.intent.id,
-                    "Raw Score": f"{result.raw_similarity * 100:.1f}%",
-                    "Context Score": f"{result.context_adjusted_score * 100:.1f}%",
-                    "Boost/Penalty": f"{(result.context_adjusted_score - result.raw_similarity) * 100:+.1f}%",
-                    "Description": result.intent.description
+            **Applied Context Factors:**
+            - 📍 Location (Deśa): {location}
+            - ⏰ Time (Kāla): {current_hour:02d}:00
+            - 🔗 History (Sahacarya): {history_type if history_type != 'None' else 'None'}
+            - 💬 Social Mode (Aucitī): {social_mode}
+            - 📱 System State (Virodhitā): {system_state}
+            - 🎙️ Voice Pitch (Svara): {audio_pitch}
+            - 👤 Demographic (Vyakti): {user_demographic}
+            - 🎤 Input Quality (Apabhraṃśa): {input_confidence:.0%}
+            """)
+            
+            # Bar chart comparing top 3 intents
+            st.markdown("#### Score Comparison: Top 3 Intents")
+            
+            chart_data = pd.DataFrame(scored_results[:3])
+            
+            fig = go.Figure(data=[
+                go.Bar(
+                    name="Raw Similarity",
+                    x=chart_data["intent"],
+                    y=chart_data["raw_score"],
+                    marker_color="rgba(100, 150, 255, 0.7)"
+                ),
+                go.Bar(
+                    name="12-Factor Score",
+                    x=chart_data["intent"],
+                    y=chart_data["twelve_factor_score"],
+                    marker_color="rgba(0, 200, 100, 0.7)"
+                )
+            ])
+            
+            fig.update_layout(
+                barmode="group",
+                title="Raw Similarity vs. Context-Adjusted Score",
+                xaxis_title="Intent",
+                yaxis_title="Score",
+                hovermode="x unified",
+                height=400
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Detailed factor breakdown table
+            st.markdown("#### Detailed Intent Scores")
+            
+            table_data = []
+            for result in scored_results:
+                table_data.append({
+                    "Intent": result["intent"].replace("_", " ").title(),
+                    "Raw Score": f"{result['raw_score']:.2%}",
+                    "12-Factor Score": f"{result['twelve_factor_score']:.2%}",
+                    "Boost/Penalty": f"{result['boost']:+.2%}",
+                    "Description": result["description"][:50] + "..."
                 })
             
-            st.table(comparison_data)
+            st.dataframe(
+                pd.DataFrame(table_data),
+                use_container_width=True,
+                hide_index=True
+            )
         
-        # Explanation
-        with st.expander("🔍 Resolution Explanation"):
-            explanation = engine.explain_resolution(user_input, context)
-            
-            st.json(explanation)
+        # Show system info in sidebar
+        st.sidebar.markdown("---")
+        st.sidebar.info(f"✅ Context factors applied: 12-factor matrix")
+        st.sidebar.info(f"📊 Intents analyzed: {len(scored_results)}")
     
     elif process_clicked:
         st.warning("⚠️ Please enter a voice command or text input first.")
@@ -334,7 +393,7 @@ def main():
     <div style="text-align: center; color: #666; padding: 20px;">
         <p><strong>Sphota: A Cognitive Meaning Engine</strong></p>
         <p>Based on Bhartṛhari's Akhaṇḍapakṣa (Sentence Holism)</p>
-        <p><em>Unlike LLMs that predict tokens, Sphota extracts holistic meaning.</em></p>
+        <p><em>The 12-Factor Context Resolution Matrix disambiguates polysemic intents.</em></p>
     </div>
     """, unsafe_allow_html=True)
 
