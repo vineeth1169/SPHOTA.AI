@@ -556,9 +556,9 @@ class ContextWeighter:
         if input_fidelity < 0.5:
             try:
                 # Import normalization layer for handling distorted input
-                from core.apabhramsa_layer import ApabhramsaLayer
+                from core.normalization_layer import NormalizationLayer
                 
-                normalizer: ApabhramsaLayer = ApabhramsaLayer()
+                normalizer: NormalizationLayer = NormalizationLayer()
                 # Apply normalization to map slang/distorted forms to pure intent
                 # Reduce score confidence based on input quality
                 score *= (0.5 + input_fidelity)

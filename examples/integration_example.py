@@ -1,5 +1,5 @@
 """
-Integration Example: Using the ContextWeighter with PasyantiEngine
+Integration Example: Using the ContextWeighter with IntentEngine
 
 This demonstrates how to integrate the 12-factor ContextWeighter into your
 intent resolution pipeline for advanced contextual scoring.
@@ -8,7 +8,7 @@ The ContextWeighter provides fine-grained control over how each contextual
 factor influences the final intent confidence score.
 """
 
-from core.pasyanti_engine import PasyantiEngine
+from core.intent_engine import IntentEngine
 from core.context_weighter import ContextWeighter
 from pathlib import Path
 from typing import Dict, Any, List
@@ -17,9 +17,9 @@ import json
 
 class IntegratedIntentResolver:
     """
-    Combined resolver using both PasyantiEngine and ContextWeighter.
+    Combined resolver using both IntentEngine and ContextWeighter.
     
-    The PasyantiEngine provides semantic similarity scoring,
+    The IntentEngine provides semantic similarity scoring,
     while the ContextWeighter applies 12-factor contextual adjustments.
     """
     
@@ -30,7 +30,7 @@ class IntegratedIntentResolver:
         Args:
             intents_path: Path to intents.json file
         """
-        self.engine = PasyantiEngine(intents_path=intents_path)
+        self.engine = IntentEngine(intents_path=intents_path)
         self.weighter = ContextWeighter()
         self.intents_db: Dict[str, Any] = self._load_intents_db(intents_path)
     
