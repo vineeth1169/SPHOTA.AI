@@ -12,18 +12,18 @@ class ContextManager:
     Manages contextual scoring for intent resolution using 12 classical factors.
     
     The 12 Factors:
-    1. Sahacarya (Association History)
-    2. Virodhitā (Conflict Check)
-    3. Artha (Active Goal)
-    4. Prakaraṇa (Application State)
-    5. Liṅga (Syntax Cues)
-    6. Śabda-sāmarthya (Word Capacity)
-    7. Aucitī (Propriety)
-    8. Deśa (Location)
-    9. Kāla (Time)
-    10. Vyakti (User Profile)
-    11. Svara (Intonation)
-    12. Apabhraṃśa (Fidelity)
+    1. Association (Association History)
+    2. Conflict (Conflict Check)
+    3. Purpose (Active Goal)
+    4. Situation (Application State)
+    5. Indicator (Syntax Cues)
+    6. WordPower (Word Capacity)
+    7. Propriety (Propriety)
+    8. Location (Location)
+    9. Time (Time)
+    10. UserProfile (User Profile)
+    11. Intonation (Intonation)
+    12. Distortion (Fidelity)
     """
     
     def __init__(self) -> None:
@@ -66,11 +66,11 @@ class ContextManager:
         """
         final_score: float = base_score
         
-        # Factor 6: Śabda-sāmarthya (Word Capacity) - Baseline
+        # Factor 6: WordPower (Word Capacity) - Baseline
         # This is the base_score from SBERT, already applied
         word_capacity: float = base_score
         
-        # Factor 1: Sahacarya (Association History)
+        # Factor 1: Association (Association History)
         # Check last 3 commands for keyword matches
         association_history: float = 0.0
         command_history: List[str] = context_data.get('command_history', [])
@@ -88,7 +88,7 @@ class ContextManager:
                 if association_history > 0:
                     break
         
-        # Factor 2: Virodhitā (Conflict Check)
+        # Factor 2: Conflict (Conflict Check)
         # Detect contradictions with system state
         conflict_check: float = 1.0
         intent_type: str = intent.get('type', '')
@@ -105,7 +105,7 @@ class ContextManager:
                 conflict_check = 0.1  # Severe penalty
                 final_score *= conflict_check
         
-        # Factor 3: Artha (Active Goal)
+        # Factor 3: Purpose (Active Goal)
         # Boost if intent aligns with current task
         active_goal: float = 0.0
         current_task_id: Optional[str] = context_data.get('current_task_id')
@@ -121,7 +121,7 @@ class ContextManager:
                     active_goal = 0.08
                     final_score += active_goal
         
-        # Factor 4: Prakaraṇa (Application State)
+        # Factor 4: Situation (Application State)
         # Boost if intent is valid for current screen/menu
         app_state: float = 0.0
         current_screen: Optional[str] = context_data.get('current_screen')
@@ -136,7 +136,7 @@ class ContextManager:
                 app_state = -0.05
                 final_score += app_state
         
-        # Factor 5: Liṅga (Syntax Cues)
+        # Factor 5: Indicator (Syntax Cues)
         # Boost based on grammatical markers
         syntax_cues: float = 0.0
         user_input: str = context_data.get('user_input', '')
@@ -156,23 +156,25 @@ class ContextManager:
                     syntax_cues = 0.06
                     final_score += syntax_cues
         
-        # Factor 7: Aucitī (Propriety)
+        # Factor 7: Propriety (Propriety)
         # Adjust based on social context
         propriety: float = 1.0
         social_mode: str = context_data.get('social_mode', '')
         intent_register: str = intent.get('register', '')
         
-        if social_mode == 'Business' and intent_register == 'Slang':
+        if social_mode.lower() == 'business' and intent_register.lower() == 'slang':
             propriety = 0.5  # 50% penalty
             final_score *= propriety
-        elif social_mode == 'Casual' and intent_register == 'Formal':
+        elif social_mode.lower() == 'casual' and intent_register.lower() == 'formal':
             propriety = 0.8  # Slight penalty
             final_score *= propriety
-        elif social_mode == social_mode and intent_register in ['Neutral', social_mode]:
-            propriety = 1.1  # Slight boost
-            final_score *= propriety
+        elif social_mode and intent_register:
+            # Register matches social mode
+            if intent_register.lower() in ['neutral', social_mode.lower()]:
+                propriety = 1.1  # Slight boost
+                final_score *= propriety
         
-        # Factor 8: Deśa (Location)
+        # Factor 8: Location (Location)
         # Boost if location matches
         location: float = 0.0
         gps_tag: Optional[str] = context_data.get('gps_tag')
@@ -191,7 +193,7 @@ class ContextManager:
                 location = -0.15
                 final_score += location
         
-        # Factor 9: Kāla (Time)
+        # Factor 9: Time (Time)
         # Boost if time matches valid range
         time: float = 0.0
         current_hour: Optional[int] = context_data.get('current_hour')
@@ -210,7 +212,7 @@ class ContextManager:
                 time = -0.1
                 final_score += time
         
-        # Factor 10: Vyakti (User Profile)
+        # Factor 10: UserProfile (User Profile)
         # Boost if vocabulary matches user demographic
         user_profile: float = 0.0
         user_demographic: str = context_data.get('user_demographic', '')
@@ -234,7 +236,7 @@ class ContextManager:
                 user_profile = -0.05
                 final_score += user_profile
         
-        # Factor 11: Svara (Intonation)
+        # Factor 11: Intonation (Intonation)
         # Boost based on audio pitch analysis
         intonation: float = 0.0
         audio_pitch: str = context_data.get('audio_pitch', '')
@@ -255,7 +257,7 @@ class ContextManager:
                 intonation = -0.05
                 final_score += intonation
         
-        # Factor 12: Apabhraṃśa (Fidelity)
+        # Factor 12: Distortion (Fidelity)
         # Widen search threshold for low-confidence input
         fidelity: float = 1.0
         input_confidence: float = context_data.get('input_confidence', 1.0)

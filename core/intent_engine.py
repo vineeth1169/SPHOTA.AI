@@ -1,7 +1,7 @@
 """
-Paśyantī Engine (The Flash of Insight)
+Intent Engine (The Flash of Insight)
 
-This is the core intent recognition engine that extracts the "Resolved Vākyasphoṭa"
+This is the core intent recognition engine that extracts the "Resolved Intent"
 (Total Intent) from user input by combining semantic similarity with the
 Context Resolution Matrix.
 
@@ -17,17 +17,17 @@ from numpy.typing import NDArray
 from sentence_transformers import SentenceTransformer
 
 from .context_matrix import ContextResolutionMatrix, ContextObject
-from .apabhramsa_layer import ApabhramsaLayer
+from .normalization_layer import NormalizationLayer
 
 
 @dataclass
 class Intent:
     """
-    Represents a Pure Meaning (Śabda-tattva) from the corpus.
+    Represents a Pure Meaning from the corpus.
     
     Attributes:
         id: Unique identifier
-        pure_text: The canonical Paśyantī representation
+        pure_text: The canonical representation
         description: Human-readable description
         required_context: Dictionary of contextual requirements
         examples: Example utterances
@@ -44,7 +44,7 @@ class Intent:
 @dataclass
 class ResolvedIntent:
     """
-    The Resolved Vākyasphoṭa - the final recognized intent.
+    The Resolved Intent - the final recognized intent.
     
     Attributes:
         intent: The matched Intent object
@@ -60,34 +60,34 @@ class ResolvedIntent:
     confidence: float
 
 
-class PasyantiEngine:
+class IntentEngine:
     """
-    The Paśyantī Engine - Extracts holistic intent from user input.
+    The Intent Engine - Extracts holistic intent from user input.
     
-    This engine implements Bhartṛhari's Akhaṇḍapakṣa by:
-    1. Computing semantic similarity (Madhyamā layer)
+    This engine implements Holistic Sentence View by:
+    1. Computing semantic similarity (Processing layer)
     2. Applying 12-factor contextual resolution (CRM)
-    3. Revealing the Paśyantī (flash of insight)
+    3. Revealing the flash of insight
     """
     
     def __init__(
         self,
         intents_path: str = "data/intents.json",
         model_name: str = "all-MiniLM-L6-v2",
-        use_apabhramsa: bool = True
+        use_normalization: bool = True
     ) -> None:
         """
-        Initialize the Paśyantī Engine.
+        Initialize the Intent Engine.
         
         Args:
             intents_path: Path to intents.json corpus
             model_name: Sentence-BERT model identifier
-            use_apabhramsa: Whether to apply Apabhraṃśa normalization
+            use_normalization: Whether to apply input normalization
         """
         # Initialize components
         self.model = SentenceTransformer(model_name)
         self.crm = ContextResolutionMatrix()
-        self.apabhramsa = ApabhramsaLayer() if use_apabhramsa else None
+        self.normalization = NormalizationLayer() if use_normalization else None
         
         # Load intents corpus
         self.intents: List[Intent] = []
@@ -136,7 +136,7 @@ class PasyantiEngine:
         """
         Encode user input to semantic vector.
         
-        Applies Apabhraṃśa normalization if enabled.
+        Applies input normalization if enabled.
         
         Args:
             text: User input text
@@ -146,9 +146,9 @@ class PasyantiEngine:
         """
         distortion_score = 0.0
         
-        if self.apabhramsa:
-            # Apply Apabhraṃśa normalization
-            normalized_text, distortion_score = self.apabhramsa.normalize_to_pure_form(text)
+        if self.normalization:
+            # Apply input normalization
+            normalized_text, distortion_score = self.normalization.normalize_to_pure_form(text)
             text_to_encode = normalized_text
         else:
             text_to_encode = text
@@ -217,7 +217,7 @@ class PasyantiEngine:
         
         Args:
             current_context: Dictionary of context values or ContextObject
-            distortion_score: Apabhraṃśa distortion score
+            distortion_score: Input distortion score
             
         Returns:
             ContextObject for CRM processing
@@ -226,8 +226,8 @@ class PasyantiEngine:
         
         # If already a ContextObject, update distortion and return
         if isinstance(current_context, ContextObject):
-            if distortion_score > 0 and current_context.apabhramsa is None:
-                current_context.apabhramsa = distortion_score
+            if distortion_score > 0 and current_context.distortion is None:
+                current_context.distortion = distortion_score
             return current_context
         
         # If None, create empty context
@@ -236,18 +236,18 @@ class PasyantiEngine:
         
         # Extract and map context values from dict
         context = ContextObject(
-            sahacarya=current_context.get('sahacarya'),
-            virodhita=current_context.get('virodhita'),
-            artha=current_context.get('artha'),
-            prakarana=current_context.get('prakarana'),
-            linga=current_context.get('linga'),
-            shabda_samarthya=current_context.get('shabda_samarthya'),
-            auciti=current_context.get('auciti'),
-            desa=current_context.get('desa'),
-            kala=current_context.get('kala') or datetime.now(),
-            vyakti=current_context.get('vyakti'),
-            svara=current_context.get('svara'),
-            apabhramsa=distortion_score if distortion_score > 0 else None
+            history=current_context.get('history') or current_context.get('history'),
+            conflict=current_context.get('conflict') or current_context.get('conflict'),
+            purpose=current_context.get('purpose') or current_context.get('purpose'),
+            situation=current_context.get('situation') or current_context.get('situation'),
+            indicator=current_context.get('indicator') or current_context.get('indicator'),
+            word_power=current_context.get('word_power') or current_context.get('word_power'),
+            propriety=current_context.get('propriety') or current_context.get('propriety'),
+            location=current_context.get('location') or current_context.get('location'),
+            time=current_context.get('time') or current_context.get('time') or datetime.now(),
+            user_profile=current_context.get('user_profile') or current_context.get('user_profile'),
+            intonation=current_context.get('intonation') or current_context.get('intonation'),
+            distortion=distortion_score if distortion_score > 0 else None
         )
         
         return context
@@ -275,14 +275,14 @@ class PasyantiEngine:
             List of ResolvedIntent objects, sorted by confidence
             
         Example:
-            >>> context = {"desa": "nature", "sahacarya": ["fishing"]}
+            >>> context = {"location": "nature", "history": ["fishing"]}
             >>> results = engine.resolve_intent("take me to the bank", context)
             >>> results[0].intent.id  # "river_bank" (not "financial_bank")
         """
         if current_context is None:
             current_context = {}
         
-        # Step 1: Encode input (with Apabhraṃśa handling)
+        # Step 1: Encode input (with Distortion handling)
         input_embedding, distortion_score = self._encode_input(user_input)
         
         # Step 2: Calculate raw semantic similarities
@@ -341,18 +341,18 @@ class PasyantiEngine:
         if isinstance(current_context, ContextObject):
             # Convert ContextObject to dict for explanation
             context_dict = {
-                'sahacarya': current_context.sahacarya,
-                'virodhita': current_context.virodhita,
-                'artha': current_context.artha,
-                'prakarana': current_context.prakarana,
-                'linga': current_context.linga,
-                'shabda_samarthya': current_context.shabda_samarthya,
-                'auciti': current_context.auciti,
-                'desa': current_context.desa,
-                'kala': current_context.kala,
-                'vyakti': current_context.vyakti,
-                'svara': current_context.svara,
-                'apabhramsa': current_context.apabhramsa
+                'history': current_context.history,
+                'conflict': current_context.conflict,
+                'purpose': current_context.purpose,
+                'situation': current_context.situation,
+                'indicator': current_context.indicator,
+                'word_power': current_context.word_power,
+                'propriety': current_context.propriety,
+                'location': current_context.location,
+                'time': current_context.time,
+                'user_profile': current_context.user_profile,
+                'intonation': current_context.intonation,
+                'distortion': current_context.distortion
             }
             context_obj = current_context
         elif current_context is None:
@@ -395,9 +395,9 @@ class PasyantiEngine:
             }
         }
         
-        # Add normalization details if Apabhraṃśa was used
-        if self.apabhramsa and distortion_score > 0:
-            normalized, _ = self.apabhramsa.normalize_to_pure_form(user_input)
+        # Add normalization details if Distortion was used
+        if self.distortion and distortion_score > 0:
+            normalized, _ = self.distortion.normalize_to_pure_form(user_input)
             explanation["input"]["normalized"] = normalized
         
         return explanation
@@ -432,6 +432,6 @@ class PasyantiEngine:
             "model_name": self.model.get_sentence_embedding_dimension(),
             "embedding_dimension": self.model.get_sentence_embedding_dimension(),
             "intent_count": len(self.intents),
-            "apabhramsa_enabled": self.apabhramsa is not None,
+            "apabhramsa_enabled": self.distortion is not None,
             "crm_factors": list(self.crm.weights.keys())
         }

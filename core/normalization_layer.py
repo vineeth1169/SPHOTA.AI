@@ -1,8 +1,8 @@
-"""
-Apabhraṃśa Layer (Vaikharī Processing)
+﻿"""
+Normalization Layer (Input Processing)
 
 Handles distorted input (slang, accents, typos) by mapping to pure semantic vectors.
-This is NOT error correction - it's a bridge to meaning that treats Apabhraṃśa
+This is NOT error correction - it's a bridge to meaning that treats distortion
 as a valid linguistic phenomenon, per Bhartṛhari's philosophy.
 """
 
@@ -12,17 +12,16 @@ import numpy as np
 from numpy.typing import NDArray
 
 
-class ApabhramsaLayer:
+class NormalizationLayer:
     """
-    Apabhraṃśa normalization and semantic bridge.
+    distortion normalization and semantic bridge.
     
-    Bhartrhari's insight: The Sphota (meaning) remains invariant even when
-    the Dhvani (surface form) is distorted. This layer doesn't "fix" errors -
+    The core insight: meaning remains invariant even when the surface form is distorted. This layer doesn't "fix" errors -
     it recognizes that slang and accent are alternative paths to the same meaning.
     """
     
     def __init__(self) -> None:
-        """Initialize the Apabhraṃśa layer with normalization rules."""
+        """Initialize the normalization layer with normalization rules."""
         # Slang to formal mapping (meaning-preserving transformations)
         self.slang_to_formal: Dict[str, str] = {
             # Contractions
@@ -123,7 +122,7 @@ class ApabhramsaLayer:
     
     def normalize_to_pure_form(self, text: str) -> Tuple[str, float]:
         """
-        Normalize Apabhraṃśa input to pure semantic form.
+        Normalize distortion input to pure semantic form.
         
         Returns both the normalized text and a distortion score that can be
         used as a confidence penalty in the Context Resolution Matrix.
@@ -192,7 +191,7 @@ class ApabhramsaLayer:
         """
         Bridge distorted text to semantic vector space.
         
-        This is the key Apabhraṃśa operation: regardless of surface distortion,
+        This is the key distortion operation: regardless of surface distortion,
         we extract the underlying Sphota (meaning-bearing unit).
         
         Args:
@@ -327,7 +326,7 @@ class ApabhramsaLayer:
         """
         Calculate semantic distance between original and normalized vectors.
         
-        Low distance = Apabhraṃśa preserved meaning well
+        Low distance = distortion preserved meaning well
         High distance = significant semantic shift (may indicate true error)
         
         Args:
@@ -367,3 +366,4 @@ class ApabhramsaLayer:
             ),
             "reverse_phonetic_mappings": len(self.phonetic_reverse)
         }
+

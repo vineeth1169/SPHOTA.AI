@@ -1,11 +1,11 @@
 """
 Context Resolution Matrix (CRM)
 
-Implements the 12-Factor Weighted Scoring Engine based on Bhartṛhari's
+Implements the 12-Factor Weighted Scoring Engine based on
 linguistic determinants for resolving ambiguity and extracting pure intent.
 
-This is the core of the Madhyamā layer - where context transforms raw input
-into resolved meaning (Vākyasphoṭa).
+This is the core of the Processing layer - where context transforms raw input
+into resolved meaning.
 """
 
 from typing import Dict, List, Optional, Any
@@ -19,27 +19,27 @@ class ContextObject:
     """
     Container for the 12 contextual factors used in intent resolution.
     
-    Each field corresponds to one of Bhartṛhari's linguistic determinants.
+    Each field corresponds to one of the linguistic determinants.
     """
     # Historical/Associative factors
-    sahacarya: Optional[List[str]] = None  # Association/User history
-    virodhita: Optional[List[str]] = None  # Opposition/Contrast markers
+    history: Optional[List[str]] = None  # Association/User history
+    conflict: Optional[List[str]] = None  # Opposition/Contrast markers
     
     # Semantic/Pragmatic factors
-    artha: Optional[str] = None  # Purpose/Goal of utterance
-    prakarana: Optional[str] = None  # Overall context/situation
-    linga: Optional[str] = None  # Grammatical/semantic signs
-    shabda_samarthya: Optional[float] = None  # Word capacity/strength
-    auciti: Optional[float] = None  # Propriety/fitness score
+    purpose: Optional[str] = None  # Purpose/Goal of utterance
+    situation: Optional[str] = None  # Overall context/situation
+    indicator: Optional[str] = None  # Grammatical/semantic signs
+    word_power: Optional[float] = None  # Word capacity/strength
+    propriety: Optional[float] = None  # Propriety/fitness score
     
     # Spatiotemporal factors
-    desa: Optional[str] = None  # Place/Location (e.g., GPS, room)
-    kala: Optional[datetime] = None  # Time/Timestamp
+    location: Optional[str] = None  # Place/Location (e.g., GPS, room)
+    time: Optional[datetime] = None  # Time/Timestamp
     
     # Individual factors
-    vyakti: Optional[str] = None  # User profile/individualization
-    svara: Optional[str] = None  # Accent/intonation pattern
-    apabhramsa: Optional[float] = None  # Distortion/slang score
+    user_profile: Optional[str] = None  # User profile/individualization
+    intonation: Optional[str] = None  # Accent/intonation pattern
+    distortion: Optional[float] = None  # Distortion/slang score
 
 
 class ContextResolutionMatrix:
@@ -61,24 +61,24 @@ class ContextResolutionMatrix:
         # The 12 Sanskrit Factors with their weights
         self.weights: Dict[str, float] = {
             # === Historical/Associative Factors ===
-            "sahacarya": 0.15,        # Association/Co-occurrence history
-            "virodhita": 0.10,        # Opposition/Contrast detection
+            "history": 0.15,        # Association/Co-occurrence history
+            "conflict": 0.10,        # Opposition/Contrast detection
             
             # === Semantic/Pragmatic Factors ===
-            "artha": 0.20,            # Purpose/Goal (highest weight)
-            "prakarana": 0.15,        # Context/Situation
-            "linga": 0.08,            # Sign/Grammar
-            "shabda_samarthya": 0.12, # Word capacity/strength
-            "auciti": 0.10,           # Propriety/fitness
+            "purpose": 0.20,            # Purpose/Goal (highest weight)
+            "situation": 0.15,        # Context/Situation
+            "indicator": 0.08,            # Sign/Grammar
+            "word_power": 0.12, # Word capacity/strength
+            "propriety": 0.10,           # Propriety/fitness
             
             # === Spatiotemporal Factors ===
-            "desa": 0.18,             # Place/Location (high salience)
-            "kala": 0.15,             # Time/temporal context
+            "location": 0.18,             # Place/Location (high salience)
+            "time": 0.15,             # Time/temporal context
             
             # === Individual Factors ===
-            "vyakti": 0.12,           # User profile/personalization
-            "svara": 0.08,            # Accent/intonation
-            "apabhramsa": 0.07        # Distortion handling
+            "user_profile": 0.12,           # User profile/personalization
+            "intonation": 0.08,            # Accent/intonation
+            "distortion": 0.07        # Distortion handling
         }
         
         # Intent keyword mappings for each factor
@@ -89,8 +89,8 @@ class ContextResolutionMatrix:
         Initialize mappings between contextual factors and intent keywords.
         These define which intents are boosted by which contextual signals.
         """
-        # Sahacarya (Association): Co-occurring intent patterns
-        self.sahacarya_map: Dict[str, List[str]] = {
+        # Association (Association): Co-occurring intent patterns
+        self.history_map: Dict[str, List[str]] = {
             "cooking": ["timer", "recipe", "ingredients", "temperature"],
             "music": ["volume", "playlist", "song", "play"],
             "navigation": ["traffic", "route", "directions", "arrive"],
@@ -98,8 +98,8 @@ class ContextResolutionMatrix:
             "exercise": ["timer", "workout", "fitness", "heart_rate"]
         }
         
-        # Virodhitā (Opposition): Conflicting/contrasting intents
-        self.virodhita_map: Dict[str, List[str]] = {
+        # Conflict (Opposition): Conflicting/contrasting intents
+        self.conflict_map: Dict[str, List[str]] = {
             "cancel": ["create", "start", "begin"],
             "stop": ["play", "start", "continue"],
             "close": ["open", "launch", "start"],
@@ -107,8 +107,8 @@ class ContextResolutionMatrix:
             "no": ["yes", "confirm", "accept"]
         }
         
-        # Artha (Purpose): Goal-oriented intent groups
-        self.artha_map: Dict[str, List[str]] = {
+        # Purpose (Purpose): Goal-oriented intent groups
+        self.purpose_map: Dict[str, List[str]] = {
             "productivity": ["work", "schedule", "reminder", "meeting", "email"],
             "entertainment": ["music", "video", "game", "play"],
             "information": ["search", "query", "weather", "news"],
@@ -116,8 +116,8 @@ class ContextResolutionMatrix:
             "automation": ["timer", "alarm", "reminder", "schedule"]
         }
         
-        # Prakaraṇa (Context/Situation): Situational intent relevance
-        self.prakarana_map: Dict[str, List[str]] = {
+        # Situation (Context/Situation): Situational intent relevance
+        self.situation_map: Dict[str, List[str]] = {
             "morning_routine": ["alarm", "weather", "news", "coffee", "breakfast"],
             "cooking": ["recipe", "timer", "ingredients", "temperature"],
             "travel": ["navigation", "traffic", "weather", "booking"],
@@ -125,8 +125,8 @@ class ContextResolutionMatrix:
             "evening_relaxation": ["music", "entertainment", "dim_lights"]
         }
         
-        # Deśa (Place): Location-based intent relevance
-        self.desa_map: Dict[str, List[str]] = {
+        # Location (Place): Location-based intent relevance
+        self.location_map: Dict[str, List[str]] = {
             "kitchen": ["cooking", "recipe", "timer", "food", "meal"],
             "bedroom": ["sleep", "alarm", "wake", "rest", "lights"],
             "office": ["work", "meeting", "productivity", "focus"],
@@ -135,8 +135,8 @@ class ContextResolutionMatrix:
             "home": ["lights", "temperature", "security", "entertainment"]
         }
         
-        # Kāla (Time): Time-based intent relevance
-        self.kala_map: Dict[str, List[str]] = {
+        # Time (Time): Time-based intent relevance
+        self.time_map: Dict[str, List[str]] = {
             "early_morning": ["alarm", "wake", "weather", "news"],
             "morning": ["breakfast", "coffee", "schedule", "commute"],
             "afternoon": ["lunch", "work", "meeting", "productivity"],
@@ -145,8 +145,8 @@ class ContextResolutionMatrix:
             "late_night": ["sleep", "rest", "quiet", "dim"]
         }
         
-        # Vyakti (User Profile): Personalized preferences
-        self.vyakti_preferences: Dict[str, List[str]] = {
+        # UserProfile (User Profile): Personalized preferences
+        self.user_profile_preferences: Dict[str, List[str]] = {
             "frequent_intents": [],  # Populated dynamically
             "preferred_style": []     # User's communication style
         }
@@ -171,62 +171,62 @@ class ContextResolutionMatrix:
             
         Example:
             >>> base_scores = {"cooking_timer": 0.65, "alarm": 0.62}
-            >>> context = ContextObject(desa="kitchen", kala=datetime.now())
+            >>> context = ContextObject(location="kitchen", time=datetime.now())
             >>> crm.resolve_intent(base_scores, context)
             {"cooking_timer": 0.83, "alarm": 0.62}  # cooking boosted in kitchen
         """
         resolved_scores = base_scores.copy()
         
-        # Factor 1: Sahacarya (Association/History)
-        if context.sahacarya:
-            resolved_scores = self._apply_sahacarya(resolved_scores, context.sahacarya)
+        # Factor 1: Association (Association/History)
+        if context.history:
+            resolved_scores = self._apply_sahacarya(resolved_scores, context.history)
         
-        # Factor 2: Virodhitā (Opposition/Contrast)
-        if context.virodhita:
-            resolved_scores = self._apply_virodhita(resolved_scores, context.virodhita)
+        # Factor 2: Conflict (Opposition/Contrast)
+        if context.conflict:
+            resolved_scores = self._apply_virodhita(resolved_scores, context.conflict)
         
-        # Factor 3: Artha (Purpose/Goal)
-        if context.artha:
-            resolved_scores = self._apply_artha(resolved_scores, context.artha)
+        # Factor 3: Purpose (Purpose/Goal)
+        if context.purpose:
+            resolved_scores = self._apply_artha(resolved_scores, context.purpose)
         
-        # Factor 4: Prakaraṇa (Context/Situation)
-        if context.prakarana:
-            resolved_scores = self._apply_prakarana(resolved_scores, context.prakarana)
+        # Factor 4: Situation (Context/Situation)
+        if context.situation:
+            resolved_scores = self._apply_prakarana(resolved_scores, context.situation)
         
-        # Factor 5: Liṅga (Sign/Grammar) - placeholder for grammatical analysis
-        if context.linga:
-            resolved_scores = self._apply_linga(resolved_scores, context.linga)
+        # Factor 5: Indicator (Sign/Grammar) - placeholder for grammatical analysis
+        if context.indicator:
+            resolved_scores = self._apply_linga(resolved_scores, context.indicator)
         
-        # Factor 6: Śabda-sāmarthya (Word Capacity)
-        if context.shabda_samarthya is not None:
+        # Factor 6: WordPower (Word Capacity)
+        if context.word_power is not None:
             resolved_scores = self._apply_shabda_samarthya(
-                resolved_scores, context.shabda_samarthya
+                resolved_scores, context.word_power
             )
         
-        # Factor 7: Aucitī (Propriety/Fitness)
-        if context.auciti is not None:
-            resolved_scores = self._apply_auciti(resolved_scores, context.auciti)
+        # Factor 7: Propriety (Propriety/Fitness)
+        if context.propriety is not None:
+            resolved_scores = self._apply_auciti(resolved_scores, context.propriety)
         
-        # Factor 8: Deśa (Place/Location)
-        if context.desa:
-            resolved_scores = self._apply_desa(resolved_scores, context.desa)
+        # Factor 8: Location (Place/Location)
+        if context.location:
+            resolved_scores = self._apply_desa(resolved_scores, context.location)
         
-        # Factor 9: Kāla (Time)
-        if context.kala:
-            resolved_scores = self._apply_kala(resolved_scores, context.kala)
+        # Factor 9: Time (Time)
+        if context.time:
+            resolved_scores = self._apply_kala(resolved_scores, context.time)
         
-        # Factor 10: Vyakti (User Profile)
-        if context.vyakti:
-            resolved_scores = self._apply_vyakti(resolved_scores, context.vyakti)
+        # Factor 10: UserProfile (User Profile)
+        if context.user_profile:
+            resolved_scores = self._apply_vyakti(resolved_scores, context.user_profile)
         
-        # Factor 11: Svara (Accent/Intonation) - placeholder for prosody
-        if context.svara:
-            resolved_scores = self._apply_svara(resolved_scores, context.svara)
+        # Factor 11: Intonation (Accent/Intonation) - placeholder for prosody
+        if context.intonation:
+            resolved_scores = self._apply_svara(resolved_scores, context.intonation)
         
-        # Factor 12: Apabhraṃśa (Distortion/Slang)
-        if context.apabhramsa is not None:
+        # Factor 12: Distortion (Distortion/Slang)
+        if context.distortion is not None:
             resolved_scores = self._apply_apabhramsa(
-                resolved_scores, context.apabhramsa
+                resolved_scores, context.distortion
             )
         
         # Normalize scores to [0, 1] range
@@ -244,11 +244,11 @@ class ContextResolutionMatrix:
     ) -> Dict[str, float]:
         """Factor 1: Boost intents associated with recent history."""
         boosted = scores.copy()
-        weight = self.weights["sahacarya"]
+        weight = self.weights["history"]
         
         for recent_intent in history:
             recent_lower = recent_intent.lower()
-            for base_intent, associated in self.sahacarya_map.items():
+            for base_intent, associated in self.history_map.items():
                 if base_intent in recent_lower:
                     for intent_id in scores:
                         if any(keyword in intent_id.lower() for keyword in associated):
@@ -263,12 +263,12 @@ class ContextResolutionMatrix:
     ) -> Dict[str, float]:
         """Factor 2: Penalize intents that oppose detected contrast markers."""
         adjusted = scores.copy()
-        weight = self.weights["virodhita"]
+        weight = self.weights["conflict"]
         
         for marker in contrast_markers:
             marker_lower = marker.lower()
-            if marker_lower in self.virodhita_map:
-                opposing_keywords = self.virodhita_map[marker_lower]
+            if marker_lower in self.conflict_map:
+                opposing_keywords = self.conflict_map[marker_lower]
                 for intent_id in scores:
                     if any(keyword in intent_id.lower() for keyword in opposing_keywords):
                         adjusted[intent_id] -= weight
@@ -282,11 +282,11 @@ class ContextResolutionMatrix:
     ) -> Dict[str, float]:
         """Factor 3: Boost intents aligned with stated purpose/goal."""
         boosted = scores.copy()
-        weight = self.weights["artha"]
+        weight = self.weights["purpose"]
         
         purpose_lower = purpose.lower()
-        if purpose_lower in self.artha_map:
-            relevant_keywords = self.artha_map[purpose_lower]
+        if purpose_lower in self.purpose_map:
+            relevant_keywords = self.purpose_map[purpose_lower]
             for intent_id in scores:
                 if any(keyword in intent_id.lower() for keyword in relevant_keywords):
                     boosted[intent_id] += weight
@@ -300,11 +300,11 @@ class ContextResolutionMatrix:
     ) -> Dict[str, float]:
         """Factor 4: Boost intents relevant to current situation/context."""
         boosted = scores.copy()
-        weight = self.weights["prakarana"]
+        weight = self.weights["situation"]
         
         situation_lower = situation.lower()
-        if situation_lower in self.prakarana_map:
-            relevant_keywords = self.prakarana_map[situation_lower]
+        if situation_lower in self.situation_map:
+            relevant_keywords = self.situation_map[situation_lower]
             for intent_id in scores:
                 if any(keyword in intent_id.lower() for keyword in relevant_keywords):
                     boosted[intent_id] += weight
@@ -328,7 +328,7 @@ class ContextResolutionMatrix:
     ) -> Dict[str, float]:
         """Factor 6: Scale scores by word capacity/strength metric."""
         adjusted = scores.copy()
-        weight = self.weights["shabda_samarthya"]
+        weight = self.weights["word_power"]
         
         # word_capacity is a measure of semantic richness [0, 1]
         # Higher capacity = more confidence in semantic matching
@@ -346,7 +346,7 @@ class ContextResolutionMatrix:
     ) -> Dict[str, float]:
         """Factor 7: Apply propriety/fitness adjustment."""
         adjusted = scores.copy()
-        weight = self.weights["auciti"]
+        weight = self.weights["propriety"]
         
         # propriety_score measures contextual appropriateness [-1, 1]
         # Positive = boost, Negative = penalize
@@ -364,11 +364,11 @@ class ContextResolutionMatrix:
     ) -> Dict[str, float]:
         """Factor 8: Boost intents relevant to current location."""
         boosted = scores.copy()
-        weight = self.weights["desa"]
+        weight = self.weights["location"]
         
         location_lower = location.lower()
-        if location_lower in self.desa_map:
-            relevant_keywords = self.desa_map[location_lower]
+        if location_lower in self.location_map:
+            relevant_keywords = self.location_map[location_lower]
             for intent_id in scores:
                 if any(keyword in intent_id.lower() for keyword in relevant_keywords):
                     boosted[intent_id] += weight
@@ -382,7 +382,7 @@ class ContextResolutionMatrix:
     ) -> Dict[str, float]:
         """Factor 9: Boost intents relevant to current time."""
         boosted = scores.copy()
-        weight = self.weights["kala"]
+        weight = self.weights["time"]
         
         # Determine time period
         hour = timestamp.hour
@@ -399,8 +399,8 @@ class ContextResolutionMatrix:
         else:
             time_period = "late_night"
         
-        if time_period in self.kala_map:
-            relevant_keywords = self.kala_map[time_period]
+        if time_period in self.time_map:
+            relevant_keywords = self.time_map[time_period]
             for intent_id in scores:
                 if any(keyword in intent_id.lower() for keyword in relevant_keywords):
                     boosted[intent_id] += weight
@@ -414,12 +414,12 @@ class ContextResolutionMatrix:
     ) -> Dict[str, float]:
         """Factor 10: Apply user personalization."""
         boosted = scores.copy()
-        weight = self.weights["vyakti"]
+        weight = self.weights["user_profile"]
         
         # In full implementation, would load user preference model
         # For now, simple keyword matching
-        if user_profile in self.vyakti_preferences:
-            preferred_intents = self.vyakti_preferences[user_profile]
+        if user_profile in self.user_profile_preferences:
+            preferred_intents = self.user_profile_preferences[user_profile]
             for intent_id in scores:
                 if any(pref in intent_id.lower() for pref in preferred_intents):
                     boosted[intent_id] += weight
@@ -444,7 +444,7 @@ class ContextResolutionMatrix:
     ) -> Dict[str, float]:
         """Factor 12: Adjust for slang/distortion level."""
         adjusted = scores.copy()
-        weight = self.weights["apabhramsa"]
+        weight = self.weights["distortion"]
         
         # distortion_score measures how much normalization was needed [0, 1]
         # Higher distortion = less confidence penalty
@@ -462,7 +462,7 @@ class ContextResolutionMatrix:
         Update weight for a specific factor.
         
         Args:
-            factor: Sanskrit factor name (e.g., "sahacarya", "desa")
+            factor: Sanskrit factor name (e.g., "history", "location")
             weight: New weight value
         """
         if factor in self.weights:
@@ -481,30 +481,30 @@ class ContextResolutionMatrix:
             List of active factor names
         """
         active = []
-        if context.sahacarya:
-            active.append("sahacarya")
-        if context.virodhita:
-            active.append("virodhita")
-        if context.artha:
-            active.append("artha")
-        if context.prakarana:
-            active.append("prakarana")
-        if context.linga:
-            active.append("linga")
-        if context.shabda_samarthya is not None:
-            active.append("shabda_samarthya")
-        if context.auciti is not None:
-            active.append("auciti")
-        if context.desa:
-            active.append("desa")
-        if context.kala:
-            active.append("kala")
-        if context.vyakti:
-            active.append("vyakti")
-        if context.svara:
-            active.append("svara")
-        if context.apabhramsa is not None:
-            active.append("apabhramsa")
+        if context.history:
+            active.append("history")
+        if context.conflict:
+            active.append("conflict")
+        if context.purpose:
+            active.append("purpose")
+        if context.situation:
+            active.append("situation")
+        if context.indicator:
+            active.append("indicator")
+        if context.word_power is not None:
+            active.append("word_power")
+        if context.propriety is not None:
+            active.append("propriety")
+        if context.location:
+            active.append("location")
+        if context.time:
+            active.append("time")
+        if context.user_profile:
+            active.append("user_profile")
+        if context.intonation:
+            active.append("intonation")
+        if context.distortion is not None:
+            active.append("distortion")
         
         return active
     
