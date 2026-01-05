@@ -234,19 +234,19 @@ class IntentEngine:
         if current_context is None:
             current_context = {}
         
-        # Extract and map context values from dict
+        # Extract and map context values from dict (with backward compatibility for old Sanskrit keys)
         context = ContextObject(
-            history=current_context.get('history') or current_context.get('history'),
-            conflict=current_context.get('conflict') or current_context.get('conflict'),
-            purpose=current_context.get('purpose') or current_context.get('purpose'),
-            situation=current_context.get('situation') or current_context.get('situation'),
-            indicator=current_context.get('indicator') or current_context.get('indicator'),
-            word_power=current_context.get('word_power') or current_context.get('word_power'),
-            propriety=current_context.get('propriety') or current_context.get('propriety'),
-            location=current_context.get('location') or current_context.get('location'),
-            time=current_context.get('time') or current_context.get('time') or datetime.now(),
-            user_profile=current_context.get('user_profile') or current_context.get('user_profile'),
-            intonation=current_context.get('intonation') or current_context.get('intonation'),
+            history=current_context.get('history') or current_context.get('sahacarya'),
+            conflict=current_context.get('conflict') or current_context.get('virodhita'),
+            purpose=current_context.get('purpose') or current_context.get('artha'),
+            situation=current_context.get('situation') or current_context.get('prakarana'),
+            indicator=current_context.get('indicator') or current_context.get('linga'),
+            word_power=current_context.get('word_power') or current_context.get('shabda_samarthya'),
+            propriety=current_context.get('propriety') or current_context.get('auciti'),
+            location=current_context.get('location') or current_context.get('desa'),
+            time=current_context.get('time') or current_context.get('kala') or datetime.now(),
+            user_profile=current_context.get('user_profile') or current_context.get('vyakti'),
+            intonation=current_context.get('intonation') or current_context.get('svara'),
             distortion=distortion_score if distortion_score > 0 else None
         )
         
