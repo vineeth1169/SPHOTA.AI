@@ -64,81 +64,81 @@ class ContextModel(BaseModel):
     """
     
     association_history: Optional[List[str]] = Field(
-        None,
+        default=None,
         description="Recent sequence of user intents for co-occurrence analysis.",
-        example=["navigate_home", "navigate_work", "set_alarm"]
+        json_schema_extra={"example": ["navigate_home", "navigate_work", "set_alarm"]}
     )
     
     conflict_markers: Optional[List[str]] = Field(
-        None,
+        default=None,
         description="Explicit contrast or opposition signals in input.",
-        example=["but", "except", "however"]
+        json_schema_extra={"example": ["but", "except", "however"]}
     )
     
     goal_alignment: Optional[str] = Field(
-        None,
+        default=None,
         description="User's stated or inferred primary goal/purpose.",
-        example="navigate"
+        json_schema_extra={"example": "navigate"}
     )
     
     situation_context: Optional[str] = Field(
-        None,
+        default=None,
         description="High-level situation classification.",
-        example="work_session"
+        json_schema_extra={"example": "work_session"}
     )
     
     linguistic_indicators: Optional[str] = Field(
-        None,
+        default=None,
         description="Grammatical/syntactic cues (e.g., 'question', 'command', 'imperative').",
-        example="command"
+        json_schema_extra={"example": "command"}
     )
     
     semantic_capacity: Optional[float] = Field(
-        None,
+        default=None,
         ge=0.0,
         le=1.0,
         description="Semantic richness metric [0.0=minimal, 1.0=maximal].",
-        example=0.85
+        json_schema_extra={"example": 0.85}
     )
     
     social_propriety: Optional[float] = Field(
-        None,
+        default=None,
         ge=-1.0,
         le=1.0,
         description="Contextual appropriateness [-1.0=inappropriate, 1.0=appropriate].",
-        example=0.9
+        json_schema_extra={"example": 0.9}
     )
     
     location_context: Optional[str] = Field(
-        None,
+        default=None,
         description="Current location identifier.",
-        example="kitchen"
+        json_schema_extra={"example": "kitchen"}
     )
     
     temporal_context: Optional[str] = Field(
-        None,
+        default=None,
         description="Timestamp for time-of-day reasoning (ISO 8601 format).",
-        example="2026-01-17T14:30:00Z"
+        json_schema_extra={"example": "2026-01-17T14:30:00Z"}
     )
     
     user_profile: Optional[str] = Field(
-        None,
+        default=None,
         description="User demographic or preference profile.",
-        example="analyst"
+        json_schema_extra={"example": "analyst"}
     )
     
     prosodic_features: Optional[str] = Field(
-        None,
+        default=None,
         description="Accent, intonation, stress patterns in speech.",
-        example="emphasized_bank"
+        json_schema_extra={"example": "emphasized_bank"}
     )
     
     input_fidelity: Optional[float] = Field(
-        None,
+        default=None,
         ge=0.0,
         le=1.0,
         description="Clarity/fidelity of input signal [0.0=degraded, 1.0=clear].",
-        example=0.95
+        json_schema_extra={"example": 0.95}
     )
     
     def to_context_snapshot(self) -> ContextSnapshot:
@@ -185,11 +185,11 @@ class IntentRequest(BaseModel):
         min_length=1,
         max_length=2000,
         description="Raw user input command text to resolve.",
-        example="take me to the bank"
+        json_schema_extra={"example": "take me to the bank"}
     )
     
     context: ContextModel = Field(
-        default_factory=ContextModel,
+        default_factory=lambda: ContextModel(),
         description="Contextual factors for intent disambiguation."
     )
 
@@ -200,19 +200,19 @@ class ResolutionFactor(BaseModel):
     factor_name: str = Field(
         ...,
         description="Name of the contributing factor.",
-        example="location_context"
+        json_schema_extra={"example": "location_context"}
     )
     
     delta: float = Field(
         ...,
         description="Score delta contribution from this factor.",
-        example=0.18
+        json_schema_extra={"example": 0.18}
     )
     
     influence: str = Field(
         default="boost",
         description="Type of influence: 'boost' or 'penalty'.",
-        example="boost"
+        json_schema_extra={"example": "boost"}
     )
 
 
@@ -227,7 +227,7 @@ class IntentResponse(BaseModel):
     resolved_intent: str = Field(
         ...,
         description="Top-ranked resolved intent identifier.",
-        example="navigate_to_financial_institution"
+        json_schema_extra={"example": "navigate_to_financial_institution"}
     )
     
     confidence_score: float = Field(
@@ -235,7 +235,7 @@ class IntentResponse(BaseModel):
         ge=0.0,
         le=1.0,
         description="Confidence in the resolved intent [0.0-1.0].",
-        example=0.94
+        json_schema_extra={"example": 0.94}
     )
     
     contributing_factors: List[ResolutionFactor] = Field(
@@ -244,9 +244,9 @@ class IntentResponse(BaseModel):
     )
     
     alternative_intents: Optional[Dict[str, float]] = Field(
-        None,
+        default=None,
         description="Alternative intent scores for transparency.",
-        example={"navigate_to_river_bank": 0.06}
+        json_schema_extra={"example": {"navigate_to_river_bank": 0.06}}
     )
     
     action_payload: Dict[str, Any] = Field(
@@ -262,7 +262,7 @@ class IntentResponse(BaseModel):
     processing_time_ms: float = Field(
         ...,
         description="Inference time in milliseconds.",
-        example=3.2
+        json_schema_extra={"example": 3.2}
     )
 
 
@@ -443,7 +443,9 @@ async def resolve_intent(request: IntentRequest) -> IntentResponse:
         contributing = []
         for factor_name, contribution in factor_contributions.items():
             delta = contribution.get('delta', 0.0)
-            influence_type = contribution.get('influence', 'neutral')
+            influence_value = contribution.get('influence', 'neutral')
+            # Ensure influence is a string
+            influence_type = str(influence_value) if influence_value is not None else 'neutral'
             contributing.append(
                 ResolutionFactor(
                     factor_name=factor_name,
