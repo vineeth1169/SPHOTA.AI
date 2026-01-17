@@ -395,9 +395,9 @@ class IntentEngine:
             }
         }
         
-        # Add normalization details if Distortion was used
-        if self.distortion and distortion_score > 0:
-            normalized, _ = self.distortion.normalize_to_pure_form(user_input)
+        # Add normalization details if Normalization was used
+        if self.normalization and distortion_score > 0:
+            normalized, _ = self.normalization.normalize_to_pure_form(user_input)
             explanation["input"]["normalized"] = normalized
         
         return explanation
@@ -432,6 +432,6 @@ class IntentEngine:
             "model_name": self.model.get_sentence_embedding_dimension(),
             "embedding_dimension": self.model.get_sentence_embedding_dimension(),
             "intent_count": len(self.intents),
-            "apabhramsa_enabled": self.distortion is not None,
+            "apabhramsa_enabled": self.normalization is not None,
             "crm_factors": list(self.crm.weights.keys())
         }
