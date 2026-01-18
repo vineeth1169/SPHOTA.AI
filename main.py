@@ -1,277 +1,4 @@
 """
-Sphota Intent Engine - FastAPI Microservice
-
-Production-ready REST API for deterministic intent resolution.
-Exposes the Sphota context resolution engine as a high-performance microservice.
-
-Architecture:
-  - Startup: Load SBERT model and initialize engines once
-  - Request: Validate input, resolve intent, return structured response
-  - Documentation: Auto-generated OpenAPI/Swagger at /docs
-  - Performance: Sub-5ms latency, deterministic results, full audit trails
-
-Usage:
-    pip install fastapi uvicorn
-    uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
-    
-    # Then visit: http://localhost:8000/docs for Swagger UI
-"""
-
-import logging
-from contextlib import asynccontextmanager
-from datetime import datetime
-from typing import Dict, List, Optional, Any
-
-from fastapi import FastAPI, HTTPException, status
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
-
-# Import Sphota engine
-from core import SphotaEngine, ContextSnapshot
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-
-# ============================================================================
-# PYDANTIC MODELS - Request/Response Validation & Serialization
-# ============================================================================
-
-class ContextModel(BaseModel):
-    """
-    Contextual factors for intent disambiguation.
-    
-    All fields are optional with sensible defaults. Only provide factors
-    relevant to your use case for optimal performance.
-    
-    The 12 Factors:
-    1. association_history: User's recent intents for pattern matching
-    2. conflict_markers: Signals of contradiction or edge cases
-    3. goal_alignment: User's primary objective
-    4. situation_context: Current scenario (e.g., 'work_session', 'travel')
-    5. linguistic_indicators: Grammar/syntax cues (e.g., 'question', 'command')
-    6. semantic_capacity: Input richness [0.0=minimal, 1.0=rich]
-    7. social_propriety: Appropriateness [-1.0=inappropriate, 1.0=appropriate]
-    8. location_context: Current location (e.g., 'office', 'kitchen', 'car')
-    9. temporal_context: Timestamp for time-of-day reasoning (ISO 8601)
-    10. user_profile: User demographics/preferences
-    11. prosodic_features: Speech intonation/stress patterns
-    12. input_fidelity: Input clarity [0.0=degraded, 1.0=clear]
-    """
-    
-    association_history: Optional[List[str]] = Field(
-        default=None,
-        description="Recent sequence of user intents for co-occurrence analysis.",
-        json_schema_extra={"example": ["navigate_home", "navigate_work", "set_alarm"]}
-    )
-    
-    conflict_markers: Optional[List[str]] = Field(
-        default=None,
-        description="Explicit contrast or opposition signals in input.",
-        json_schema_extra={"example": ["but", "except", "however"]}
-    )
-    
-    goal_alignment: Optional[str] = Field(
-        default=None,
-        description="User's stated or inferred primary goal/purpose.",
-        json_schema_extra={"example": "navigate"}
-    )
-    
-    situation_context: Optional[str] = Field(
-        default=None,
-        description="High-level situation classification.",
-        json_schema_extra={"example": "work_session"}
-    )
-    
-    linguistic_indicators: Optional[str] = Field(
-        default=None,
-        description="Grammatical/syntactic cues (e.g., 'question', 'command', 'imperative').",
-        json_schema_extra={"example": "command"}
-    )
-    
-    semantic_capacity: Optional[float] = Field(
-        default=None,
-        ge=0.0,
-        le=1.0,
-        description="Semantic richness metric [0.0=minimal, 1.0=maximal].",
-        json_schema_extra={"example": 0.85}
-    )
-    
-    social_propriety: Optional[float] = Field(
-        default=None,
-        ge=-1.0,
-        le=1.0,
-        description="Contextual appropriateness [-1.0=inappropriate, 1.0=appropriate].",
-        json_schema_extra={"example": 0.9}
-    )
-    
-    location_context: Optional[str] = Field(
-        default=None,
-        description="Current location identifier.",
-        json_schema_extra={"example": "kitchen"}
-    )
-    
-    temporal_context: Optional[str] = Field(
-        default=None,
-        description="Timestamp for time-of-day reasoning (ISO 8601 format).",
-        json_schema_extra={"example": "2026-01-17T14:30:00Z"}
-    )
-    
-    user_profile: Optional[str] = Field(
-        default=None,
-        description="User demographic or preference profile.",
-        json_schema_extra={"example": "analyst"}
-    )
-    
-    prosodic_features: Optional[str] = Field(
-        default=None,
-        description="Accent, intonation, stress patterns in speech.",
-        json_schema_extra={"example": "emphasized_bank"}
-    )
-    
-    input_fidelity: Optional[float] = Field(
-        default=None,
-        ge=0.0,
-        le=1.0,
-        description="Clarity/fidelity of input signal [0.0=degraded, 1.0=clear].",
-        json_schema_extra={"example": 0.95}
-    )
-    
-    def to_context_snapshot(self) -> ContextSnapshot:
-        """
-        Convert Pydantic model to core ContextSnapshot.
-        
-        Returns:
-            ContextSnapshot instance with parsed temporal context.
-        """
-        temporal = None
-        if self.temporal_context:
-            try:
-                temporal = datetime.fromisoformat(
-                    self.temporal_context.replace('Z', '+00:00')
-                )
-            except ValueError as e:
-                logger.warning(f"Invalid temporal context format: {e}")
-        
-        return ContextSnapshot(
-            association_history=self.association_history,
-            conflict_markers=self.conflict_markers,
-            goal_alignment=self.goal_alignment,
-            situation_context=self.situation_context,
-            linguistic_indicators=self.linguistic_indicators,
-            semantic_capacity=self.semantic_capacity,
-            social_propriety=self.social_propriety,
-            location_context=self.location_context,
-            temporal_context=temporal,
-            user_profile=self.user_profile,
-            prosodic_features=self.prosodic_features,
-            input_fidelity=self.input_fidelity,
-        )
-
-
-class IntentRequest(BaseModel):
-    """
-    Request model for intent resolution.
-    
-    Accepts raw user input and optional contextual factors for disambiguation.
-    """
-    
-    command_text: str = Field(
-        ...,
-        min_length=1,
-        max_length=2000,
-        description="Raw user input command text to resolve.",
-        json_schema_extra={"example": "take me to the bank"}
-    )
-    
-    context: ContextModel = Field(
-        default_factory=lambda: ContextModel(),
-        description="Contextual factors for intent disambiguation."
-    )
-
-
-class ResolutionFactor(BaseModel):
-    """Individual factor contribution to intent resolution."""
-    
-    factor_name: str = Field(
-        ...,
-        description="Name of the contributing factor.",
-        json_schema_extra={"example": "location_context"}
-    )
-    
-    delta: float = Field(
-        ...,
-        description="Score delta contribution from this factor.",
-        json_schema_extra={"example": 0.18}
-    )
-    
-    influence: str = Field(
-        default="boost",
-        description="Type of influence: 'boost' or 'penalty'.",
-        json_schema_extra={"example": "boost"}
-    )
-
-
-class IntentResponse(BaseModel):
-    """
-    Response model for intent resolution.
-    
-    Contains resolved intent, confidence score, contributing factors,
-    and structured action payload for downstream execution.
-    """
-    
-    resolved_intent: str = Field(
-        ...,
-        description="Top-ranked resolved intent identifier.",
-        json_schema_extra={"example": "navigate_to_financial_institution"}
-    )
-    
-    confidence_score: float = Field(
-        ...,
-        ge=0.0,
-        le=1.0,
-        description="Confidence in the resolved intent [0.0-1.0].",
-        json_schema_extra={"example": 0.94}
-    )
-    
-    contributing_factors: List[ResolutionFactor] = Field(
-        ...,
-        description="Ordered list of factors that influenced the resolution."
-    )
-    
-    alternative_intents: Optional[Dict[str, float]] = Field(
-        default=None,
-        description="Alternative intent scores for transparency.",
-        json_schema_extra={"example": {"navigate_to_river_bank": 0.06}}
-    )
-    
-    action_payload: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Structured data for downstream action execution."
-    )
-    
-    audit_trail: Dict[str, Any] = Field(
-        default_factory=dict,
-        description="Full decision audit trail for compliance/debugging."
-    )
-    
-    processing_time_ms: float = Field(
-        ...,
-        description="Inference time in milliseconds.",
-        json_schema_extra={"example": 3.2}
-    )
-
-
-class HealthResponse(BaseModel):
-    """Health check response."""
-    status: str = Field(default="healthy")
-    version: str = Field(default="2.0.0")
-    engine_loaded: bool = Field(default=True)
-"""
 Sphota Deterministic Context Engine - FastAPI Microservice
 
 A 12-Factor NLU middleware that resolves intent using Time, Location, and User History.
@@ -315,7 +42,6 @@ from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
-from fastapi.openapi.utils import get_openapi
 
 # Import Sphota engine
 from core import SphotaEngine, ContextSnapshot
@@ -396,25 +122,24 @@ Resolves ambiguous user input to specific intents using **Time**, **Location**, 
 Optimized for Banking & Automotive industries with deterministic, fully-auditable results.
 
 ### Key Features
-- **Deterministic Resolution**: Same input + context = Identical output (reproducible across requests/deployments)
-- **Sub-5ms Latency**: <5ms P99 inference time for real-time applications
-- **Explainable AI**: 12-factor contribution audit trail for every decision
-- **Enterprise-Ready**: Full compliance audit trails, no randomness, production-grade reliability
-- **Containerized**: Docker + docker-compose for one-command deployment with pre-cached models
+- **Deterministic Resolution**: Same input + context = Identical output
+- **Sub-5ms Latency**: <5ms P99 inference time
+- **Explainable AI**: 12-factor contribution audit trail
+- **Enterprise-Ready**: Full compliance audit trails, zero randomness
 
 ### The 12 Context Factors
-1. **association_history** - Co-occurrence patterns from user's past interactions
-2. **conflict_markers** - Explicit contradictions or edge case signals
-3. **goal_alignment** - User's primary objective or stated purpose
-4. **situation_context** - High-level scenario (work_session, commute, leisure)
-5. **linguistic_indicators** - Grammar, sentiment, speech act patterns
-6. **semantic_capacity** - Input richness/specificity [0.0-1.0]
-7. **social_propriety** - Cultural/organizational norm alignment [-1.0 to 1.0]
-8. **location_context** - Geographic location (GPS, branch code, vehicle interior)
-9. **temporal_context** - Time-of-day, season, business hours detection
-10. **user_profile** - Demographic, role, permissions, preferences
-11. **prosodic_features** - Speech intonation, emphasis, accent patterns
-12. **input_fidelity** - Signal clarity/degradation [0.0=noisy, 1.0=clear]
+1. association_history - Co-occurrence patterns from user's past interactions
+2. conflict_markers - Explicit contradictions or edge case signals
+3. goal_alignment - User's primary objective or stated purpose
+4. situation_context - High-level scenario (work_session, commute, leisure)
+5. linguistic_indicators - Grammar, sentiment, speech act patterns
+6. semantic_capacity - Input richness/specificity [0.0-1.0]
+7. social_propriety - Cultural/organizational norm alignment [-1.0 to 1.0]
+8. location_context - Geographic location (GPS, branch code, vehicle interior)
+9. temporal_context - Time-of-day, season, business hours detection
+10. user_profile - Demographic, role, permissions, preferences
+11. prosodic_features - Speech intonation, emphasis, accent patterns
+12. input_fidelity - Signal clarity/degradation [0.0=noisy, 1.0=clear]
 
 ### Use Cases
 - **Banking**: Disambiguate "bank" (financial institution vs. river bank) using location + temporal context
@@ -497,8 +222,9 @@ async def health_check() -> HealthResponse:
     """
     return HealthResponse(
         status="healthy" if sphota_engine else "not_ready",
-        version="2.0.0",
-        engine_loaded=sphota_engine is not None
+        version="1.0.0-beta",
+        engine_loaded=sphota_engine is not None,
+        timestamp=datetime.utcnow().isoformat() + "Z"
     )
 
 
@@ -507,53 +233,8 @@ async def health_check() -> HealthResponse:
     response_model=IntentResponse,
     status_code=status.HTTP_200_OK,
     tags=["Intent Resolution"],
-    summary="Resolve user intent with context",
-    description="Deterministically resolve ambiguous user input to specific intents using contextual factors."
-)
-async def resolve_intent(request: IntentRequest) -> IntentResponse:
-    """
-    Resolve user intent using the 12-Factor Context Resolution Engine.
-    
-    This endpoint:
-    1. Accepts raw user input and optional context
-    2. Normalizes input (slang/accents)
-    3. Computes semantic similarity to known intents
-    4. Applies 12-factor context weighting
-    5. Returns deterministic, fully-auditable result
-    
-    Args:
-        request: IntentRequest with command_text and context
-        
-    Returns:
-        IntentResponse with resolved intent, confidence, and audit trail
-        
-    Raises:
-        HTTPException: If engine is not initialized or resolution fails
-        
-    Example:
-        ```bash
-        curl -X POST http://localhost:8000/resolve-intent \\
-          -H "Content-Type: application/json" \\
-          -d '{
-            "command_text": "take me to the bank",
-            "context": {
-              "location_context": "manhattan",
-              "temporal_context": "2026-01-17T09:15:00Z",
-              "user_profile": "analyst",
-              "association_history": ["viewed_portfolio", "paid_bill"]
-            }
-          }'
-        ```
-    """
-    
-    # Check engine is initialized
-    if sphota_engine is None:
-        logger.error("Sphota engine not initialized")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Sphota engine not initialized. Server starting up?"
-        summary="Resolve User Intent (12-Factor Context Engine)",
-        description="""
+    summary="Resolve User Intent (12-Factor Context Engine)",
+    description="""
 **Deterministically resolve ambiguous user input to specific intents** using the 12-Factor Context Resolution Engine.
 
 This endpoint accepts raw user input and optional contextual factors, then returns:
@@ -601,25 +282,25 @@ The `context` object requires **strict English keys** (not Sanskrit terminology)
 ```json
 Request:
 {
-    "command_text": "Transfer 500 to John's account",
-    "context": {
-        "location_context": "bank_branch_nyc",
-        "user_history": ["salary_deposit", "bill_payment"],
-        "temporal_context": "2026-01-17T14:30:00Z",
-        "semantic_capacity": 0.95,
-        "social_propriety": 0.90
-    }
+  "command_text": "Transfer 500 to John's account",
+  "context": {
+    "location_context": "bank_branch_nyc",
+    "user_profile": "analyst",
+    "temporal_context": "2026-01-17T14:30:00Z",
+    "semantic_capacity": 0.95,
+    "social_propriety": 0.90
+  }
 }
 
 Response:
 {
-    "resolved_intent": "transfer_to_account",
-    "confidence_score": 0.94,
-    "contributing_factors": [
-        {"factor_name": "location_context", "delta": 0.18, "influence": "boost"},
-        {"factor_name": "temporal_context", "delta": 0.12, "influence": "boost"}
-    ],
-    "processing_time_ms": 3.2
+  "resolved_intent": "transfer_to_account",
+  "confidence_score": 0.94,
+  "contributing_factors": [
+    {"factor_name": "location_context", "delta": 0.18, "influence": "boost"},
+    {"factor_name": "temporal_context", "delta": 0.12, "influence": "boost"}
+  ],
+  "processing_time_ms": 3.2
 }
 ```
 
@@ -627,29 +308,41 @@ Response:
 ```json
 Request:
 {
-    "command_text": "Take me home",
-    "context": {
-        "location_context": "vehicle_interior",
-        "goal_alignment": "navigate",
-        "temporal_context": "2026-01-17T09:00:00Z",
-        "semantic_capacity": 0.70,
-        "input_fidelity": 0.72
-    }
+  "command_text": "Take me home",
+  "context": {
+    "location_context": "vehicle_interior",
+    "goal_alignment": "navigate",
+    "temporal_context": "2026-01-17T09:00:00Z",
+    "semantic_capacity": 0.70,
+    "input_fidelity": 0.72
+  }
 }
 
 Response:
 {
-    "resolved_intent": "navigate_home",
-    "confidence_score": 0.88,
-    "contributing_factors": [
-        {"factor_name": "goal_alignment", "delta": 0.22, "influence": "boost"},
-        {"factor_name": "location_context", "delta": 0.15, "influence": "boost"}
-    ],
-    "processing_time_ms": 2.8
+  "resolved_intent": "navigate_home",
+  "confidence_score": 0.88,
+  "contributing_factors": [
+    {"factor_name": "goal_alignment", "delta": 0.22, "influence": "boost"},
+    {"factor_name": "location_context", "delta": 0.15, "influence": "boost"}
+  ],
+  "processing_time_ms": 2.8
 }
 ```
 """,
-        response_description="Resolved intent with confidence, audit trail, and performance metrics",
+    response_description="Resolved intent with confidence, audit trail, and performance metrics",
+)
+async def resolve_intent(request: IntentRequest) -> IntentResponse:
+    """Resolve user intent using the 12-Factor Context Resolution Engine."""
+    
+    # Check engine is initialized
+    if sphota_engine is None:
+        logger.error("Sphota engine not initialized")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Sphota engine not initialized. Server starting up?"
+        )
+    
     try:
         import time
         start_time = time.time()
@@ -864,7 +557,7 @@ async def root():
     """API root endpoint with links to documentation."""
     return {
         "title": "Sphota Intent Engine",
-        "version": "2.0.0",
+        "version": "1.0.0-beta",
         "description": "Deterministic Intent Resolution Microservice",
         "status": "running",
         "docs": {
