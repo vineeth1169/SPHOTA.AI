@@ -13,9 +13,13 @@ Models:
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from pydantic import BaseModel, Field, ConfigDict
+
+# Only needed for type checkers to resolve return annotation without runtime import
+if TYPE_CHECKING:
+    from core import ContextSnapshot
 
 
 # ============================================================================
