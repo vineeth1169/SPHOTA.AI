@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # Sphota API - FastAPI Microservice
+  sphota_api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sphota_api
+    ports:
+      - "8000:8000"
+    environment:
+      # Database Configuration
+      DB_HOST: sphota_db
+      DB_PORT: 3306
+      DB_USER: ${DB_USER:-sphota_user}
+      DB_PASSWORD: ${DB_PASSWORD:-sphota_secure_password}
+      DB_NAME: ${DB_NAME:-sphota_db}
+      
+      # API Configuration
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      LOG_LEVEL: info
+      
+      # Model Configuration
+      SBERT_MODEL: all-MiniLM-L6-v2
+    
+    depends_on:
+      sphota_db:
+        condition: service_healthy
+    
+    networks:
+      - sphota_network
+    
+    volumes:
+      # Mount code for development (remove in production)
+      - .:/app
+      # Persist HuggingFace cache
+      - huggingface_cache:/.cache/huggingface
+    
+    restart: unless-stopped
+    
+    # Override command to skip reload in production (if needed)
+    # command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+
+  # MySQL Database
+  sphota_db:
+    image: mysql:8.0
+    container_name: sphota_db
+    ports:
+      - "3306:3306"
+    
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_secure_password}
+      MYSQL_DATABASE: ${DB_NAME:-sphota_db}
+      MYSQL_USER: ${DB_USER:-sphota_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-sphota_secure_password}
+      MYSQL_INITDB_SKIP_TZINFO: 1
+    
+    networks:
+      - sphota_network
+    
+    volumes:
+      # Persist database data
+      - sphota_db_volume:/var/lib/mysql
+      # Optional: mount SQL init scripts
+      # - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USER:-sphota_user}", "-p${DB_PASSWORD:-sphota_secure_password}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    
+    restart: unless-stopped
+    
+    # MySQL specific configurations
+    command: [
+      "--default-authentication-plugin=mysql_native_password",
+      "--character-set-server=utf8mb4",
+      "--collation-server=utf8mb4_unicode_ci",
+      "--max-connections=1000"
+    ]
+
+# Networks
+networks:
+  sphota_network:
+    driver: bridge
+
+# Volumes
+volumes:
+  sphota_db_volume:
+    driver: local
+  huggingface_cache:
+    driver: local
