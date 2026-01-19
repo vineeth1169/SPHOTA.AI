@@ -37,6 +37,8 @@ services:
       - .:/app
       # Persist HuggingFace cache
       - huggingface_cache:/.cache/huggingface
+      # Persist ChromaDB vector memory between restarts
+      - chroma_data:/app/chroma_data
     
     restart: unless-stopped
     
@@ -94,4 +96,6 @@ volumes:
   sphota_db_volume:
     driver: local
   huggingface_cache:
+    driver: local
+  chroma_data:
     driver: local

@@ -52,10 +52,8 @@ logs/
 Thumbs.db
 .DS_Store
 
-# Docker
+# Docker (keep Dockerfile and docker-compose.yml accessible)
 .dockerignore
-Dockerfile
-docker-compose.yml
 
 # Temporary files
 tmp/

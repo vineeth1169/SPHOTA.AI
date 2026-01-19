@@ -15,9 +15,9 @@
 # - Privacy-First: runs entirely locally using SBERT and ChromaDB.
 
 # Core Embeddings & Vector Store
-sentence-transformers==2.3.1
-chromadb==0.4.22
-numpy==1.24.3
+sentence-transformers>=2.3.1
+chromadb>=0.4.0  # Vector database for semantic memory (Python 3.14+ may need manual install)
+numpy>=1.24.3
 
 # Audio Processing (Vaikharī Layer)
 openai-whisper==20231117
@@ -30,6 +30,9 @@ plotly>=5.18.0
 fastapi==0.104.1
 uvicorn==0.24.0
 
+# Database
+mysql-connector-python==8.2.0
+
 # Testing Framework
 pytest==7.4.3
 pytest-mock==3.12.0
@@ -37,5 +40,6 @@ pytest-mock==3.12.0
 # Utilities
 pandas==2.1.4
 pydantic==2.5.3
+pydantic-settings==2.1.0
 python-dotenv==1.0.0
 

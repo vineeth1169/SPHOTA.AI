@@ -503,3 +503,289 @@ class HealthResponse(BaseModel):
         description="**UTC timestamp of health check.** ISO 8601 format.",
         json_schema_extra={"example": "2026-01-17T14:30:15Z"}
     )
+
+# ============================================================================
+# FEEDBACK MODELS - REAL-TIME LEARNING
+# ============================================================================
+
+class FeedbackRequest(BaseModel):
+    """
+    **Real-Time Learning Feedback**
+    
+    User feedback on whether an intent resolution was correct.
+    This enables the engine to continuously learn and improve accuracy.
+    
+    **Feedback Loop:**
+    
+    - If `was_correct=True` → Save to ChromaDB as "Golden Record" for future retrieval
+    - If `was_correct=False` → Log to SQL Review Queue for manual analysis
+    
+    **Benefits:**
+    
+    - Improves accuracy over time (cold-start → warm-start)
+    - Captures real user needs vs. training data assumptions
+    - Enables A/B testing and progressive refinement
+    - 100% deterministic: Same feedback = Same learning
+    
+    **Example Workflows:**
+    
+    1. **User Corrects Slang:** "I need dough" incorrectly → "withdraw_cash"
+       - User feedback: "was_correct=False"
+       - Logged for review + manual correction
+       
+    2. **System Validates Success:** "Transfer 500 to John"
+       - System: "Resolved to transfer_to_account with 0.94 confidence"
+       - User: "Yes, that's correct"
+       - Saved to ChromaDB for future reference
+    """
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "summary": "Correct Resolution (Golden Record)",
+                    "description": "User confirms the resolved intent was correct",
+                    "value": {
+                        "original_input": "Transfer 500 to John",
+                        "resolved_intent": "transfer_to_account",
+                        "was_correct": True,
+                        "confidence_when_resolved": 0.94,
+                        "notes": "User confirmed intent was correct"
+                    }
+                },
+                {
+                    "summary": "Incorrect Resolution (Review Queue)",
+                    "description": "User indicates the resolved intent was wrong",
+                    "value": {
+                        "original_input": "I need dough quick",
+                        "resolved_intent": "withdraw_cash",
+                        "was_correct": False,
+                        "confidence_when_resolved": 0.65,
+                        "correct_intent": "borrow_money",
+                        "notes": "Should have resolved to loan request, not cash withdrawal"
+                    }
+                }
+            ]
+        }
+    )
+
+    original_input: str = Field(
+        ...,
+        min_length=1,
+        max_length=2000,
+        description="**The original user input** that was resolved",
+        json_schema_extra={"example": "Transfer 500 to John"}
+    )
+
+    resolved_intent: str = Field(
+        ...,
+        description="**The intent the engine resolved to.** Used to update memory/review queue.",
+        json_schema_extra={"example": "transfer_to_account"}
+    )
+
+    was_correct: bool = Field(
+        ...,
+        description="**Whether the resolution was correct.** True → Save to ChromaDB (Golden Record). False → Log to SQL Review Queue.",
+        json_schema_extra={"example": True}
+    )
+
+    confidence_when_resolved: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="**Engine confidence when this intent was resolved.** Used for precision/recall tracking.",
+        json_schema_extra={"example": 0.94}
+    )
+
+    correct_intent: Optional[str] = Field(
+        default=None,
+        description="**If was_correct=False, the actual correct intent.** Helps with training data correction.",
+        json_schema_extra={"example": "loan_request"}
+    )
+
+    notes: Optional[str] = Field(
+        default=None,
+        max_length=500,
+        description="**Optional notes from user.** Useful for understanding why feedback was given.",
+        json_schema_extra={"example": "Should have resolved to loan request, not cash withdrawal"}
+    )
+
+
+class FeedbackResponse(BaseModel):
+    """
+    **Real-Time Learning Feedback Response**
+    
+    Confirmation that feedback was processed and learning occurred.
+    """
+
+    success: bool = Field(
+        ...,
+        description="**Whether feedback was successfully processed.**",
+        json_schema_extra={"example": True}
+    )
+
+    action_taken: str = Field(
+        ...,
+        description="**Action taken based on feedback.** One of: 'saved_to_memory' (was_correct=True) or 'queued_for_review' (was_correct=False).",
+        json_schema_extra={"example": "saved_to_memory"}
+    )
+
+    memory_id: Optional[str] = Field(
+        default=None,
+        description="**If was_correct=True, the ID of the saved memory record.** Can be used to track or recall this feedback.",
+        json_schema_extra={"example": "transfer_to_account_1705502415123"}
+    )
+
+    review_queue_id: Optional[str] = Field(
+        default=None,
+        description="**If was_correct=False, the ID of the queued review item.** Useful for following up on manual corrections.",
+        json_schema_extra={"example": "review_20260117_001"}
+    )
+
+    message: str = Field(
+        ...,
+        description="**Human-readable confirmation message.**",
+        json_schema_extra={"example": "Feedback saved to Fast Memory as Golden Record. Engine will use this for future disambiguation."}
+    )
+
+    learning_status: Dict[str, Any] = Field(
+        ...,
+        description="**Current learning statistics.** Includes memory count, success rate, etc.",
+        json_schema_extra={
+            "example": {
+                "total_feedbacks": 42,
+                "correct_feedbacks": 38,
+                "incorrect_feedbacks": 4,
+                "accuracy_improvement": "90.5%",
+                "last_update": "2026-01-17T14:30:15Z"
+            }
+        }
+    )
+
+
+class ReinforcementFeedbackRequest(BaseModel):
+    """
+    **Simplified Reinforcement Feedback for Fast Learning Loop**
+    
+    Minimal data model for rapid feedback submission. Links feedback to original
+    resolution request and indicates whether correction was needed.
+    
+    **Use Cases:**
+    - Fast user feedback during interactions
+    - Mobile app feedback submission (bandwidth-constrained)
+    - Real-time learning loops
+    - A/B testing and experimentation
+    
+    **Workflow:**
+    1. Engine resolves intent → Returns request_id
+    2. User provides feedback with request_id + correction
+    3. Engine learns and improves future resolutions
+    """
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "summary": "Positive Feedback",
+                    "description": "User confirms resolution was correct",
+                    "value": {
+                        "request_id": "550e8400-e29b-41d4-a716-446655440000",
+                        "user_correction": "transfer_to_account",
+                        "was_successful": True
+                    }
+                },
+                {
+                    "summary": "Negative Feedback with Correction",
+                    "description": "User indicates wrong resolution and provides correction",
+                    "value": {
+                        "request_id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+                        "user_correction": "borrow_money",
+                        "was_successful": False
+                    }
+                }
+            ]
+        }
+    )
+    
+    request_id: str = Field(
+        ...,
+        description="**UUID linking to original intent resolution request.** Enables tracking and learning.",
+        json_schema_extra={"example": "550e8400-e29b-41d4-a716-446655440000"}
+    )
+    
+    user_correction: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="**Correct intent ID or description.** Used if resolution was incorrect, or confirmed intent if correct.",
+        json_schema_extra={"example": "transfer_to_account"}
+    )
+    
+    was_successful: bool = Field(
+        ...,
+        description="**Whether the original resolution was correct.** True → Strengthen pattern. False → Review and correct.",
+        json_schema_extra={"example": False}
+    )
+
+
+class ReinforcementFeedbackResponse(BaseModel):
+    """
+    **Reinforcement Feedback Processing Confirmation**
+    
+    Confirms that feedback was received, processed, and engine learning updated.
+    """
+    
+    success: bool = Field(
+        ...,
+        description="Whether feedback was successfully processed",
+        json_schema_extra={"example": True}
+    )
+    
+    request_id: str = Field(
+        ...,
+        description="Echo of the request_id for tracking",
+        json_schema_extra={"example": "550e8400-e29b-41d4-a716-446655440000"}
+    )
+    
+    feedback_type: str = Field(
+        default="reinforcement",
+        description="Type of feedback submitted",
+        json_schema_extra={"example": "reinforcement"}
+    )
+    
+    action_taken: str = Field(
+        ...,
+        description="Action taken: 'logged_for_learning' (successful) or 'queued_for_review' (needs correction)",
+        json_schema_extra={"example": "queued_for_review"}
+    )
+    
+    user_correction: str = Field(
+        ...,
+        description="Confirmed or corrected intent",
+        json_schema_extra={"example": "borrow_money"}
+    )
+    
+    message: str = Field(
+        ...,
+        description="Human-readable confirmation message",
+        json_schema_extra={"example": "✓ Feedback received and processed. Engine will review this pattern."}
+    )
+    
+    learning_status: Dict[str, Any] = Field(
+        ...,
+        description="Current learning statistics",
+        json_schema_extra={
+            "example": {
+                "total_feedbacks": 127,
+                "correct_feedbacks": 112,
+                "incorrect_feedbacks": 15,
+                "last_update": "2026-01-18T10:30:45Z"
+            }
+        }
+    )
+    
+    timestamp: str = Field(
+        ...,
+        description="ISO 8601 timestamp of feedback processing",
+        json_schema_extra={"example": "2026-01-18T10:30:45Z"}
+    )

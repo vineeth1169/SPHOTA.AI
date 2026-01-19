@@ -51,6 +51,13 @@ Sphota resolves ambiguity by weighing twelve independent contextual factors:
   - "lowkey fire" → "high quality"
   - Regional accents → phonetic alignment
 
+### **Fast Memory Layer: Real-Time Ambiguity Resolution** ✨ NEW
+- **Vector Database (ChromaDB)** → Retrieves Top 3 similar past intents
+  - "I need dough" → Finds "I need money" from past interactions
+  - Boosts relevant intent scores before SQL validation
+  - 100% local, persistent memory across sessions
+  - [Full Documentation](docs/FAST_MEMORY.md)
+
 ### **Context Resolution Engine: The Core**
 Analyzes real-time context to disambiguate intent:
 

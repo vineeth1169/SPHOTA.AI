@@ -1,6 +1,6 @@
 # Multi-stage build for Sphota Engine FastAPI microservice
 # Stage 1: Builder - Download and cache AI models
-FROM python:3.10-slim as builder
+FROM python:3.11-slim as builder
 
 WORKDIR /app
 
@@ -10,6 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     libffi-dev \
     python3-dev \
+    gcc \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements early for layer caching
@@ -19,9 +21,10 @@ COPY requirements.txt .
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Install Python dependencies
+# Install Python dependencies (skip chromadb temporarily to avoid build issues)
 RUN pip install --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
+    grep -v "chromadb" requirements.txt > requirements_docker.txt && \
+    pip install --no-cache-dir -r requirements_docker.txt
 
 # Pre-download the Sentence-Transformers model to avoid runtime download
 # This prevents the first run from waiting for a 300MB+ download
@@ -31,13 +34,13 @@ RUN python -c "from sentence_transformers import SentenceTransformer; \
     print(f'Model cached at: {model.modules[0].auto_model.config.model_type}')"
 
 # Stage 2: Runtime - Slim production image
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
 # Install only runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    mysql-client-core \
+    default-mysql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy virtual environment from builder
